@@ -1,9 +1,21 @@
-name: "Terraform action"
+name: "Deploy ascii-art"
+
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_call:
+    inputs:
+      stage:
+        required: true
+        type: string
+    secrets:
+      AWS_REGION:
+        required: true
+      AWS_BUCKET_NAME:
+        required: true
+      AWS_BUCKET_KEY_NAME:
+        required: true
+      AWS_ROLE:
+        required: true
+
 permissions:
   id-token: write
   contents: read
@@ -14,7 +26,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
-  Deploy:
+  deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -54,7 +66,7 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -no-color
+        run: terraform plan -var="stage=${{ inputs.stage }}" -no-color
         if: github.event_name == 'pull_request'
         continue-on-error: true
 
@@ -101,4 +113,4 @@ jobs:
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -var="stage=${{ inputs.stage }}" -auto-approve -input=false
