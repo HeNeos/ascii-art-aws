@@ -111,6 +111,10 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Terraform Apply on Dev
+        if: github.ref == 'refs/heads/dev' && github.event_name == 'push' && inputs.stage == 'dev'
+        run: terraform apply -var="stage=${{ inputs.stage }}" -auto-approve -input=false
+
+      - name: Terraform Apply on Prod
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && inputs.stage == 'prod'
         run: terraform apply -var="stage=${{ inputs.stage }}" -auto-approve -input=false
