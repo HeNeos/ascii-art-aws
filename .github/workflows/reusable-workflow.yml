@@ -47,10 +47,100 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.9.5
+          terraform_wrapper: false
+
+      - name: Parse Lambda Function Names
+        id: parse-config
+        run: |
+          function_name_downsize_media=$(jq -r '.lambda.function_name_downsize_media' config.json)
+          function_name_extract_audio=$(jq -r '.lambda.function_name_extract_audio' config.json)
+          function_name_merge_frames=$(jq -r '.lambda.function_name_merge_frames' config.json)
+          function_name_proccess_frames=$(jq -r '.lambda.function_name_proccess_frames' config.json)
+          function_name_split_frames=$(jq -r '.lambda.function_name_split_frames' config.json)
+
+          echo "FUNCTION_NAME_DOWNSIZE_MEDIA=${function_name_downsize_media}" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME_EXTRACT_AUDIO=${function_name_extract_audio}" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME_MERGE_FRAMES=${function_name_merge_frames}" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME_PROCCESS_FRAMES=${function_name_proccess_frames}" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME_SPLIT_FRAMES=${function_name_split_frames}" >> $GITHUB_OUTPUT
+
+          echo "LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA=${function_name_downsize_media}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO=${function_name_extract_audio}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNCTION_NAME_MERGE_FRAMES=${function_name_merge_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES=${function_name_proccess_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNCTION_NAME_SPLIT_FRAMES=${function_name_split_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+
+      - name: Deploy ECR
+        id: deploy-ecr
+        env:
+          AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+          AWS_BUCKET_KEY_NAME: ${{ secrets.AWS_BUCKET_KEY_NAME }}
+        run: |
+          cd modules/ecr
+          echo "BASE_REPO_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_OUTPUT
+          terraform fmt -check
+          terraform init -backend-config="bucket=${AWS_BUCKET_NAME}" -backend-config="key=${{inputs.stage}}/${AWS_BUCKET_KEY_NAME}" -backend-config="region=${AWS_REGION}"
+          terraform plan \
+            -var="repository_name=downsize_media_${{ inputs.stage }}" \
+            -var="lambda_function_name_downsize_media=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+            -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
+            -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
+            -var="lambda_function_name_proccess_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+            -var="lambda_function_name_split_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_SPLIT_FRAMES }}" \
+            -no-color
+
+          terraform apply \
+            -var="repository_name=downsize_media_${{ inputs.stage }}" \
+            -var="lambda_function_name_downsize_media=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+            -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
+            -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
+            -var="lambda_function_name_proccess_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+            -var="lambda_function_name_split_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_SPLIT_FRAMES }}" \
+            -auto-approve -input=false
+
+      - name: Get ECR Repository URIs
+        run: |
+          cd modules/ecr
+
+          echo "IMAGE_REPO_DOWNSIZE_MEDIA=$(terraform output -raw ecr_repo_downsize_media_url):latest" >> $GITHUB_ENV
+          echo "IMAGE_REPO_EXTRACT_AUDIO=$(terraform output -raw ecr_repo_extract_audio_url):latest" >> $GITHUB_ENV
+          echo "IMAGE_REPO_MERGE_FRAMES=$(terraform output -raw ecr_repo_merge_frames_url):latest" >> $GITHUB_ENV
+          echo "IMAGE_REPO_PROCCESS_FRAMES=$(terraform output -raw ecr_repo_proccess_frames_url):latest" >> $GITHUB_ENV
+          echo "IMAGE_REPO_SPLIT_FRAMES=$(terraform output -raw ecr_repo_split_frames_url):latest" >> $GITHUB_ENV
+
+      - name: Docker Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push Docker Images
+        run: |
+          ecr_repo_base_uri=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
+
+          declare -A function_images
+          function_images=(
+              ["${{ steps.parse-config.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA }}"]="${{ env.IMAGE_REPO_DOWNSIZE_MEDIA }}"
+              ["${{ steps.parse-config.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="${{ env.IMAGE_REPO_EXTRACT_AUDIO }}"
+              ["${{ steps.parse-config.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="${{ env.IMAGE_REPO_MERGE_FRAMES }}"
+              ["${{ steps.parse-config.outputs.FUNCTION_NAME_PROCCESS_FRAMES }}"]="${{ env.IMAGE_REPO_PROCCESS_FRAMES }}"
+              ["${{ steps.parse-config.outputs.FUNCTION_NAME_SPLIT_FRAMES }}"]="${{ env.IMAGE_REPO_SPLIT_FRAMES }}"
+          )
+
+          cd lambdas
+          for function_name in "${!function_images[@]}"; do
+              cd $function_name
+              repo_name="${function_images[$function_name]}"
+              if git diff --quiet HEAD^ HEAD -- requirement.txt *.py; then
+                echo "No changes, skipping lambda"
+              else
+                docker build -t "$repo_name" -f "Dockerfile" .
+                docker push "$repo_name"
+              fi
+              cd ..
+          done
 
       - name: Terraform fmt
         id: fmt
-        run: terraform fmt -check
+        run: |
+          terraform fmt -check
         continue-on-error: true
 
       - name: Terraform Init
@@ -59,10 +149,6 @@ jobs:
           AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
           AWS_BUCKET_KEY_NAME: ${{ secrets.AWS_BUCKET_KEY_NAME }}
         run: terraform init -backend-config="bucket=${AWS_BUCKET_NAME}" -backend-config="key=${{inputs.stage}}/${AWS_BUCKET_KEY_NAME}" -backend-config="region=${AWS_REGION}"
-
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
 
       - name: Terraform Plan
         id: plan
@@ -113,8 +199,26 @@ jobs:
 
       - name: Terraform Apply on Dev
         if: github.ref == 'refs/heads/dev' && github.event_name == 'push' && inputs.stage == 'dev'
-        run: terraform apply -var="stage=${{ inputs.stage }}" -auto-approve -input=false
+        run: |
+          ecr_repo_base_uri=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
+          terraform apply \
+          -var="stage=${{ inputs.stage }}" \
+          -var="lambda_image_downsize_media=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}:latest" \
+          -var="lambda_image_extract_audio=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}:latest" \
+          -var="lambda_image_merge_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}:latest" \
+          -var="lambda_image_proccess_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}:latest" \
+          -var="lambda_image_split_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_SPLIT_FRAMES }}:latest" \
+          -auto-approve -input=false
 
       - name: Terraform Apply on Prod
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && inputs.stage == 'prod'
-        run: terraform apply -var="stage=${{ inputs.stage }}" -auto-approve -input=false
+        run: |
+          ecr_repo_base_uri=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
+          terraform apply \
+          -var="stage=${{ inputs.stage }}" \
+          -var="lambda_image_downsize_media=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}:latest" \
+          -var="lambda_image_extract_audio=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}:latest" \
+          -var="lambda_image_merge_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}:latest" \
+          -var="lambda_image_proccess_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}:latest" \
+          -var="lambda_image_split_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_SPLIT_FRAMES }}:latest" \
+          -auto-approve -input=false
