@@ -134,7 +134,7 @@ jobs:
           for function_name in "${!function_images[@]}"; do
               cd $function_name
               repo_name="${function_images[$function_name]}"
-              if git diff --quiet HEAD^4 HEAD -- requirement.txt *.py; then
+              if git diff --quiet HEAD^ HEAD -- requirement.txt *.py; then
                 echo "No changes, skipping lambda"
               else
                 docker build -t "$repo_name" -f "Dockerfile" .

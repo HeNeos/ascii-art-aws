@@ -1,12 +1,3 @@
-# data "terraform_remote_state" "ecr" {
-#   backend = "s3"
-#   config = {
-#     bucket = "oidc-github-${data.aws_caller_identity.current.account_id}"
-#     key    = "${var.stage}/infra.tfstate"
-#     region = var.region
-#   }
-# }
-
 terraform {
   backend "s3" {}
 }
