@@ -1,8 +1,3 @@
-variable "repository_name" {
-  description = "The name of the ECR repository"
-  type        = string
-}
-
 variable "lambda_function_name_downsize_media" {
   type = string
 }
@@ -21,4 +16,14 @@ variable "lambda_function_name_proccess_frames" {
 
 variable "lambda_function_name_split_frames" {
   type = string
+}
+
+variable "region" {
+  type    = string
+  default = "us-east-1"
+}
+
+variable "stage" {
+  type    = string
+  default = "dev"
 }

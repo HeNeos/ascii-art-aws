@@ -36,14 +36,14 @@ resource "aws_iam_policy_attachment" "lambda_exec_attachment" {
 }
 
 resource "aws_iam_role" "step_function_role" {
-  name               = "ste-function-role-${var.stage}"
+  name               = "step-function-role-${var.stage}"
   assume_role_policy = data.aws_iam_policy_document.step_function_policy_assume_role.json
 }
 
 resource "aws_iam_policy_attachment" "step_function_attachment" {
   name       = "step-function-policy-${var.stage}"
   roles      = [aws_iam_role.step_function_role.name]
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSStepFunctionsFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
 }
 
 resource "aws_lambda_function" "downsize_media" {

@@ -1,11 +1,11 @@
 data "aws_caller_identity" "current" {}
 
-terraform {
-  backend "s3" {
-    bucket = "terraform-state-bucket-${data.aws_caller_identity.current.account_id}"
-    key    = "${var.stage}/infra.tfstate"
-  }
-}
+# terraform {
+#   backend "s3" {
+#     bucket = "oidc-github-${data.aws_caller_identity.current.account_id}"
+#     key    = "${var.stage}/infra.tfstate"
+#   }
+# }
 
 terraform {
   required_providers {

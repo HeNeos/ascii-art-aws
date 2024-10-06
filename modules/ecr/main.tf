@@ -1,3 +1,9 @@
+data "aws_caller_identity" "current" {}
+
+terraform {
+  backend "s3" {}
+}
+
 resource "aws_ecr_repository" "downsize_media" {
   name = var.lambda_function_name_downsize_media
 }
