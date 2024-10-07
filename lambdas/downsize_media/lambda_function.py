@@ -1,10 +1,12 @@
+import logging
+
 import boto3
 import cv2
 
 from typing import cast
 from PIL import Image
 from lambdas.font import Font
-from lambdas.types import (
+from lambdas.custom_types import (
     MediaFile,
     ImageFile,
     VideoFile,
@@ -13,7 +15,8 @@ from lambdas.types import (
 )
 from lambdas.utils import split_file_name, calculate_scale, download_from_s3, save_image
 
-
+logger = logging.getLogger()
+logger.setLevel("INFO")
 s3_client = boto3.client("s3")
 
 
@@ -30,16 +33,16 @@ def find_media_type(file_path: str) -> MediaFile:
 def rescale_image(image: Image.Image, image_file: ImageFile, bucket_name: str) -> str:
     width, height = image.size
     image_name: str = image_file.file_name
-    image_extension: str = image_file.extension
+    image_extension: ImageExtension = image_file.extension
     rescale: int = calculate_scale(height)
     resized_width: int = int(width * (Font.Height.value / Font.Width.value) // rescale)
     resized_height: int = height // rescale
-    resized_image_name: str = f"{image_name}_resized.{image_extension}"
+    resized_image_name: str = f"{image_name}_resized.{image_extension.value}"
     resized_image = image.resize((resized_width, resized_height))
     return save_image(
         s3_client,
         resized_image,
-        image_file.extension.value,
+        image_extension.value,
         bucket_name,
         f"proccessed/{resized_image_name}",
     )
@@ -82,6 +85,7 @@ def extract_frames(
 
 
 def lambda_handler(event: dict, _) -> dict:
+    logger.info(event)
     file_path: str = event["s3"]["object"]["key"]
     bucket_name: str = event["s3"]["bucket"]["name"]
     media_file: MediaFile = find_media_type(file_path)
@@ -104,4 +108,5 @@ def lambda_handler(event: dict, _) -> dict:
         proccessed_key = rescale_image(image, cast(ImageFile, media_file), bucket_name)
         return {**response, "proccessed_key": proccessed_key}
 
+    logger.info(response)
     return response

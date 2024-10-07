@@ -1,6 +1,7 @@
-from typing import TypeAlias, Enum
+from typing import TypeAlias
 from PIL import Image
 from dataclasses import dataclass
+from enum import Enum
 
 Scale: TypeAlias = float | int
 Color: TypeAlias = tuple[int, int, int]
