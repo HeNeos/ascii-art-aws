@@ -11,7 +11,8 @@ def calculate_scale(image_height: int) -> int:
 
 
 def split_file_name(file_path: str) -> tuple[str, str]:
-    file_name, file_extension = os.path.splitext(file_path)
+    base_name: str = os.path.basename(file_path)
+    file_name, file_extension = os.path.splitext(base_name)
     return file_name, file_extension.lstrip(".").lower()
 
 
@@ -32,7 +33,6 @@ def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
 def save_image(
     s3_client, image: Image.Image, image_format: str, bucket_name: str, key: str
 ) -> str:
-    proccessed_key = f"proccessed/{key}"
     with io.BytesIO() as buffer:
         image.save(buffer, format=image_format)
         buffer.seek(0)
@@ -40,6 +40,6 @@ def save_image(
             Body=buffer.getvalue(),
             Bucket=bucket_name,
             ContentType=f"image/{image_format}",
-            Key=proccessed_key,
+            Key=key,
         )
-    return proccessed_key
+    return key

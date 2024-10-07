@@ -41,7 +41,7 @@ def rescale_image(image: Image.Image, image_file: ImageFile, bucket_name: str) -
         resized_image,
         image_file.extension.value,
         bucket_name,
-        resized_image_name,
+        f"proccessed/{resized_image_name}",
     )
 
 
@@ -73,7 +73,7 @@ def extract_frames(
                 resized_frame,
                 "png",
                 bucket_name,
-                f"{video_name}/{frame_id:06d}.png",
+                f"proccessed/{video_name}/{frame_id:06d}.png",
             )
             frame_id += 1
         else:
