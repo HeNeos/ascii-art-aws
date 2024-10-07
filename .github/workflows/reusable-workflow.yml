@@ -28,8 +28,22 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
-  deploy:
+  deploy_ecr:
     runs-on: ubuntu-latest
+    outputs:
+      IMAGE_REPO_DOWNSIZE_MEDIA: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_DOWNSIZE_MEDIA}}
+      IMAGE_REPO_EXTRACT_AUDIO: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_EXTRACT_AUDIO}}
+      IMAGE_REPO_MERGE_FRAMES: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_MERGE_FRAMES}}
+      IMAGE_REPO_PROCCESS_FRAMES: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_PROCCESS_FRAMES}}
+      FUNCTION_NAME_DOWNSIZE_MEDIA: ${{steps.parse-config.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA}}
+      FUNCTION_NAME_EXTRACT_AUDIO: ${{steps.parse-config.outputs.FUNCTION_NAME_EXTRACT_AUDIO}}
+      FUNCTION_NAME_MERGE_FRAMES: ${{steps.parse-config.outputs.FUNCTION_NAME_MERGE_FRAMES}}
+      FUNCTION_NAME_PROCCESS_FRAMES: ${{steps.parse-config.outputs.FUNCTION_NAME_PROCCESS_FRAMES}}
+      LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA}}
+      LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO}}
+      LAMBDA_FUNCTION_NAME_MERGE_FRAMES: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES}}
+      LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES}}
+      BASE_REPO_URI: ${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
     defaults:
       run:
         shell: bash
@@ -46,6 +60,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: GitHub-OIDC-Terraform
+          mask-aws-account-id: "false"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -100,27 +115,130 @@ jobs:
             -auto-approve -input=false
 
       - name: Get ECR Repository URIs
+        id: get-ecr-repository
         run: |
           cd modules/ecr
 
-          echo "IMAGE_REPO_DOWNSIZE_MEDIA=$(terraform output -raw ecr_repo_downsize_media_url):latest" >> $GITHUB_ENV
-          echo "IMAGE_REPO_EXTRACT_AUDIO=$(terraform output -raw ecr_repo_extract_audio_url):latest" >> $GITHUB_ENV
-          echo "IMAGE_REPO_MERGE_FRAMES=$(terraform output -raw ecr_repo_merge_frames_url):latest" >> $GITHUB_ENV
-          echo "IMAGE_REPO_PROCCESS_FRAMES=$(terraform output -raw ecr_repo_proccess_frames_url):latest" >> $GITHUB_ENV
+          echo "IMAGE_REPO_DOWNSIZE_MEDIA=$(terraform output -raw ecr_repo_downsize_media_url):latest" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_EXTRACT_AUDIO=$(terraform output -raw ecr_repo_extract_audio_url):latest" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_MERGE_FRAMES=$(terraform output -raw ecr_repo_merge_frames_url):latest" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_PROCCESS_FRAMES=$(terraform output -raw ecr_repo_proccess_frames_url):latest" >> $GITHUB_OUTPUT
+
+      - name: Set base repo uri
+        id: set_base_repo_uri
+        uses: noobly314/share-data@v1
+        with:
+          share-id: base_repo_uri
+          mode: set
+          key: base_repo_uri
+          value: ${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
+
+      - name: Set image repo downsize media
+        id: set_image_repo_downsize_media
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_media
+          mode: set
+          key: image_repo_downsize_media
+          value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_DOWNSIZE_MEDIA}}
+
+      - name: Set image repo extract_audio
+        id: set_image_repo_extract_audio
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_extract_audio
+          mode: set
+          key: image_repo_extract_audio
+          value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_EXTRACT_AUDIO}}
+
+      - name: Set image repo merge frames
+        id: set_image_repo_merge_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_merge_frames
+          mode: set
+          key: image_repo_merge_frames
+          value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_MERGE_FRAMES}}
+
+      - name: Set image repo proccess frames
+        id: set_image_repo_proccess_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_proccess_frames
+          mode: set
+          key: image_repo_proccess_frames
+          value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_PROCCESS_FRAMES}}
+
+  build_and_push_docker:
+    name: Build and push Docker Images
+    runs-on: ubuntu-latest
+    needs: deploy_ecr
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+
+      - name: Configure AWS credentials from AWS account
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHub-OIDC-Terraform
 
       - name: Docker Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Get base repo uri
+        id: get_base_repo_uri
+        uses: noobly314/share-data@v1
+        with:
+          share-id: base_repo_uri
+          mode: get
+          key: base_repo_uri
+
+      - name: Get image repo downsize media
+        id: get_image_repo_downsize_media
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_media
+          mode: get
+          key: image_repo_downsize_media
+
+      - name: Get image repo extract audio
+        id: get_image_repo_extract_audio
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_extract_audio
+          mode: get
+          key: image_repo_extract_audio
+
+      - name: Get image repo merge frames
+        id: get_image_repo_merge_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_merge_frames
+          mode: get
+          key: image_repo_merge_frames
+
+      - name: Get image repo proccess frames
+        id: get_image_repo_proccess_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_proccess_frames
+          mode: get
+          key: image_repo_proccess_frames
+
       - name: Build and Push Docker Images
         run: |
-          ecr_repo_base_uri=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
+          ecr_repo_base_uri=${{steps.get_base_repo_uri.outputs.data}}
 
           declare -A function_images
           function_images=(
-              ["${{ steps.parse-config.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA }}"]="${{ env.IMAGE_REPO_DOWNSIZE_MEDIA }}"
-              ["${{ steps.parse-config.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="${{ env.IMAGE_REPO_EXTRACT_AUDIO }}"
-              ["${{ steps.parse-config.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="${{ env.IMAGE_REPO_MERGE_FRAMES }}"
-              ["${{ steps.parse-config.outputs.FUNCTION_NAME_PROCCESS_FRAMES }}"]="${{ env.IMAGE_REPO_PROCCESS_FRAMES }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA }}"]="${{ steps.get_image_repo_downsize_media.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="${{ steps.get_image_repo_extract_audio.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="${{ steps.get_image_repo_merge_frames.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCCESS_FRAMES }}"]="${{ steps.get_image_repo_proccess_frames.outputs.data }}"
           )
 
           cd lambdas
@@ -129,10 +247,76 @@ jobs:
               if git diff --quiet HEAD^ HEAD -- $function_name/requirement.txt $function_name/*.py *.py; then
                 echo "No changes, skipping lambda"
               else
-                docker build -t "$repo_name" -f "$function_name/Dockerfile" .
-                docker push "$repo_name"
+                (
+                  docker build -t "$repo_name" -f "$function_name/Dockerfile" . &&
+                  docker push "$repo_name"
+                ) &
               fi
           done
+
+          wait
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: deploy_ecr
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+
+      - name: Configure AWS credentials from AWS account
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHub-OIDC-Terraform
+
+      - name: Get base repo uri
+        id: get_base_repo_uri
+        uses: noobly314/share-data@v1
+        with:
+          share-id: base_repo_uri
+          mode: get
+          key: base_repo_uri
+
+      - name: Get image repo downsize media
+        id: get_image_repo_downsize_media
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_media
+          mode: get
+          key: image_repo_downsize_media
+
+      - name: Get image repo extract audio
+        id: get_image_repo_extract_audio
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_extract_audio
+          mode: get
+          key: image_repo_extract_audio
+
+      - name: Get image repo merge frames
+        id: get_image_repo_merge_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_merge_frames
+          mode: get
+          key: image_repo_merge_frames
+
+      - name: Get image repo proccess frames
+        id: get_image_repo_proccess_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_proccess_frames
+          mode: get
+          key: image_repo_proccess_frames
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.9.5
+          terraform_wrapper: false
 
       - name: Terraform fmt
         id: fmt
@@ -152,10 +336,10 @@ jobs:
         run: |
           terraform plan \
           -var="stage=${{ inputs.stage }}" \
-          -var="lambda_image_downsize_media=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-          -var="lambda_image_extract_audio=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-          -var="lambda_image_merge_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-          -var="lambda_image_proccess_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+          -var="lambda_image_downsize_media=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+          -var="lambda_image_extract_audio=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
+          -var="lambda_image_merge_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
+          -var="lambda_image_proccess_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
           -no-color
         continue-on-error: true
 
@@ -203,23 +387,23 @@ jobs:
       - name: Terraform Apply on Dev
         if: github.ref == 'refs/heads/dev' && github.event_name == 'push' && inputs.stage == 'dev'
         run: |
-          ecr_repo_base_uri=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
+          ecr_repo_base_uri=${{steps.get_base_repo_uri.outputs.data}}
           terraform apply \
           -var="stage=${{ inputs.stage }}" \
-          -var="lambda_image_downsize_media=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-          -var="lambda_image_extract_audio=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-          -var="lambda_image_merge_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-          -var="lambda_image_proccess_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+          -var="lambda_image_downsize_media=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+          -var="lambda_image_extract_audio=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
+          -var="lambda_image_merge_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
+          -var="lambda_image_proccess_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
           -auto-approve -input=false
 
       - name: Terraform Apply on Prod
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && inputs.stage == 'prod'
         run: |
-          ecr_repo_base_uri=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
+          ecr_repo_base_uri=${{steps.get_base_repo_uri.outputs.data}}
           terraform apply \
           -var="stage=${{ inputs.stage }}" \
-          -var="lambda_image_downsize_media=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-          -var="lambda_image_extract_audio=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-          -var="lambda_image_merge_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-          -var="lambda_image_proccess_frames=${{steps.deploy-ecr.outputs.BASE_REPO_URI}}/${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+          -var="lambda_image_downsize_media=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+          -var="lambda_image_extract_audio=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
+          -var="lambda_image_merge_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
+          -var="lambda_image_proccess_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
           -auto-approve -input=false

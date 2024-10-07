@@ -1,13 +1,15 @@
 import logging
-from multiprocessing import cpu_count
-from lambda_multiprocessing import Pool
+import psutil
 
 import boto3
 import cv2
-from cv2.typing import MatLike
 
+from cv2.typing import MatLike
+from multiprocessing import cpu_count
+from lambda_multiprocessing import Pool
 from typing import cast
 from PIL import Image
+
 from lambdas.font import Font
 from lambdas.custom_types import (
     FrameData,
@@ -18,14 +20,20 @@ from lambdas.custom_types import (
     ImageExtension,
     VideoExtension,
 )
-from lambdas.utils import split_file_name, calculate_scale, download_from_s3, save_image
+from lambdas.utils import (
+    compress_and_save,
+    split_file_name,
+    calculate_scale,
+    download_from_s3,
+    save_image,
+)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
 bucket_name: str = ""
-batch_size: int = 500
+batch_size: int = 200
 
 
 def find_media_type(file_path: str) -> MediaFile:
@@ -59,7 +67,7 @@ def rescale_image(image: Image.Image, image_file: ImageFile) -> str:
     )
 
 
-def resize_frame(frame_data: FrameData) -> tuple[Image.Image, int, str]:
+def resize_frame(frame_data: FrameData) -> tuple[Image.Image, int]:
     frame_image: MatLike = cast(MatLike, frame_data.frame)
     height, width, _ = frame_image.shape
     scale = calculate_scale(height)
@@ -77,30 +85,19 @@ def resize_frame(frame_data: FrameData) -> tuple[Image.Image, int, str]:
             )
         ),
         frame_data.frame_id,
-        frame_data.video_name,
-    )
-
-
-def quick_save(resized_frame):
-    resized_frame_image, resized_frame_id, video_name = resized_frame
-    save_image(
-        s3_client,
-        resized_frame_image,
-        "png",
-        bucket_name,
-        f"proccessed/{video_name}/{resized_frame_id:06d}.png",
     )
 
 
 def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> str:
     frame_id: int = 1
+    last_frame_id: int = 1
     video_name: str = video_file.file_name
-    frames: Frames = []
     continue_proccessing: bool = True
 
     logger.info(cpu_count())
 
     while continue_proccessing:
+        frames: Frames = []
         for _ in range(batch_size):
             ret, frame = video_capture.read()
             if ret:
@@ -111,20 +108,23 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> st
             else:
                 continue_proccessing = False
                 break
+        logger.info(f"Finished extract frames: {psutil.virtual_memory()[3]/1000000}")
         pool = Pool(cpu_count())
         resized_frames = pool.map(resize_frame, frames)
 
-        pool.map(quick_save, resized_frames)
+        logger.info(f"Finished resize: {psutil.virtual_memory()[3]/1000000}")
 
-        # for resized_frame in resized_frames:
-        #     resized_frame_image, resized_frame_id = resized_frame
-        #     save_image(
-        #         s3_client,
-        #         resized_frame_image,
-        #         "png",
-        #         bucket_name,
-        #         f"proccessed/{video_name}/{resized_frame_id:06d}.png",
-        #     )
+        compress_and_save(
+            s3_client,
+            resized_frames,
+            bucket_name,
+            f"proccessed/{video_name}/{(last_frame_id):06d}-{frame_id-1:06d}.tar.gz",
+        )
+        last_frame_id = frame_id
+        resized_frames.clear()
+
+        logger.info(f"Finished saving: {psutil.virtual_memory()[3]/1000000}")
+
     return f"proccessed/{video_name}"
 
 

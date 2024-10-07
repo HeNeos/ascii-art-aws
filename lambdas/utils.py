@@ -1,11 +1,12 @@
 import io
 import os
+import tarfile
 
 from PIL import Image
 
 
 def calculate_scale(image_height: int) -> int:
-    max_height = 200
+    max_height = 150
     new_scale: int = (image_height + max_height - 1) // max_height
     return new_scale
 
@@ -28,6 +29,25 @@ def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
     s3_client.download_file(bucket_name, s3_key, local_path)
 
     return local_path
+
+
+def compress_and_save(
+    s3_client, frames: list[tuple[Image.Image, int]], bucket_name: str, key: str
+):
+    with io.BytesIO() as buffer:
+        with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+            for frame_data in frames:
+                frame_image, frame_id = frame_data
+                frame_buffer = io.BytesIO()
+                frame_image.save(frame_buffer, format="PNG")
+                frame_buffer.seek(0)
+
+                tarinfo = tarfile.TarInfo(name=f"{frame_id:06d}.png")
+                tarinfo.size = len(frame_buffer.getvalue())
+
+                tar.addfile(tarinfo, fileobj=frame_buffer)
+        buffer.seek(0)
+        s3_client.upload_fileobj(buffer, bucket_name, key)
 
 
 def save_image(
