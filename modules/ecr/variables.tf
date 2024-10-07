@@ -14,10 +14,6 @@ variable "lambda_function_name_proccess_frames" {
   type = string
 }
 
-variable "lambda_function_name_split_frames" {
-  type = string
-}
-
 variable "region" {
   type    = string
   default = "us-east-1"

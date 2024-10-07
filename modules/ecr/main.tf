@@ -19,7 +19,3 @@ resource "aws_ecr_repository" "merge_frames" {
 resource "aws_ecr_repository" "proccess_frames" {
   name = var.lambda_function_name_proccess_frames
 }
-
-resource "aws_ecr_repository" "split_frames" {
-  name = var.lambda_function_name_split_frames
-}

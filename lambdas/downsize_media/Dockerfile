@@ -1,12 +1,10 @@
-# lambda/downsize_media/Dockerfile
 FROM public.ecr.aws/lambda/python:3.12
 
-# Copy requirements and function code
-COPY requirements.txt ./
-COPY lambda_function.py ./
+COPY downsize_media/requirements.txt .
+RUN pip install --no-cache-dir -r ./requirements.txt
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+COPY font.py types.py utils.py ./lambdas/
 
-# Command to run the Lambda function
-CMD ["lambda_function.lambda_handler"]
+COPY downsize_media/lambda_function.py ./lambdas/downsize_media/.
+
+CMD ["lambdas.downsize_media.lambda_function.lambda_handler"]

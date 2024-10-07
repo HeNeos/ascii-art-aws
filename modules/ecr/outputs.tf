@@ -13,7 +13,3 @@ output "ecr_repo_merge_frames_url" {
 output "ecr_repo_proccess_frames_url" {
   value = aws_ecr_repository.proccess_frames.repository_url
 }
-
-output "ecr_repo_split_frames_url" {
-  value = aws_ecr_repository.split_frames.repository_url
-}

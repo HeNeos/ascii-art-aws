@@ -24,7 +24,3 @@ variable "lambda_image_merge_frames" {
 variable "lambda_image_proccess_frames" {
   type = string
 }
-
-variable "lambda_image_split_frames" {
-  type = string
-}

@@ -25,7 +25,6 @@ locals {
   function_name_extract_audio   = local.config.lambda.function_name_extract_audio
   function_name_merge_frames    = local.config.lambda.function_name_merge_frames
   function_name_proccess_frames = local.config.lambda.function_name_proccess_frames
-  function_name_split_frames    = local.config.lambda.function_name_split_frames
 }
 
 module "sfn" {
@@ -35,10 +34,8 @@ module "sfn" {
   lambda_function_name_extract_audio   = "${local.function_name_extract_audio}-${var.stage}"
   lambda_function_name_merge_frames    = "${local.function_name_merge_frames}-${var.stage}"
   lambda_function_name_proccess_frames = "${local.function_name_proccess_frames}-${var.stage}"
-  lambda_function_name_split_frames    = "${local.function_name_split_frames}-${var.stage}"
   lambda_image_downsize_media          = var.lambda_image_downsize_media
   lambda_image_extract_audio           = var.lambda_image_extract_audio
   lambda_image_merge_frames            = var.lambda_image_merge_frames
   lambda_image_proccess_frames         = var.lambda_image_proccess_frames
-  lambda_image_split_frames            = var.lambda_image_split_frames
 }

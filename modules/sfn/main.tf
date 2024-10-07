@@ -52,6 +52,10 @@ resource "aws_lambda_function" "downsize_media" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_media}:latest"
   timeout       = 60
+  memory_size   = 512
+  ephemeral_storage {
+    size = 4096
+  }
 }
 
 resource "aws_lambda_function" "extract_audio" {
@@ -78,14 +82,6 @@ resource "aws_lambda_function" "proccess_frames" {
   timeout       = 60
 }
 
-
-resource "aws_lambda_function" "split_frames" {
-  function_name = var.lambda_function_name_split_frames
-  role          = aws_iam_role.lambda_role.arn
-  package_type  = "Image"
-  image_uri     = "${var.lambda_image_split_frames}:latest"
-  timeout       = 60
-}
 
 resource "aws_sfn_state_machine" "step_function" {
   name     = "AsciiArt-${var.stage}"
