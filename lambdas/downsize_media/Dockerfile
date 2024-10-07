@@ -5,7 +5,6 @@ RUN pip install --no-cache-dir -r ./requirements.txt
 
 COPY *.py ./lambdas/
 
-COPY downsize_media/__init__.py ./lambdas/downsize_media/__init__.py
 COPY downsize_media/lambda_function.py ./lambdas/downsize_media/lambda_function.py
 
 CMD ["lambdas.downsize_media.lambda_function.lambda_handler"]

@@ -1,12 +1,11 @@
 from PIL import Image
-from typing import Tuple
-from modules.ascii_dict import AsciiDict
-from modules.utils import map_to_char
+from lambdas.proccess_frames.modules.ascii_dict import AsciiDict
+from lambdas.proccess_frames.modules.utils import map_to_char
 from lambdas.proccess_frames.modules.save import save_ascii
-from lambdas.types import AsciiImage, AsciiColors
+from lambdas.custom_types import AsciiImage, AsciiColors
 
 
-def process_image(image: Image.Image) -> Tuple[AsciiImage, AsciiColors]:
+def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
     pix = image.load()
 
     gray_image: Image.Image = image.convert("LA")

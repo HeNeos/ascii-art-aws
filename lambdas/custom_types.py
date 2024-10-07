@@ -2,6 +2,7 @@ from typing import TypeAlias
 from PIL import Image
 from dataclasses import dataclass
 from enum import Enum
+from cv2.typing import MatLike
 
 Scale: TypeAlias = float | int
 Color: TypeAlias = tuple[int, int, int]
@@ -37,7 +38,7 @@ MediaFile: TypeAlias = ImageFile | VideoFile
 
 @dataclass
 class FrameData:
-    frame: Image.Image
+    frame: Image.Image | MatLike
     frame_id: int
     video_name: str
 

@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 
 from lambdas.font import Font
-from lambdas.types import AsciiImage, AsciiColors
+from lambdas.custom_types import AsciiImage, AsciiColors
 
 
 def save_ascii_image(ascii_art: AsciiImage, image_name: str, **kwargs):

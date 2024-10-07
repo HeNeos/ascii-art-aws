@@ -124,8 +124,6 @@ jobs:
           )
 
           cd lambdas
-          pwd
-          ls -l
           for function_name in "${!function_images[@]}"; do
               repo_name="${function_images[$function_name]}"
               if git diff --quiet HEAD^ HEAD -- $function_name/requirement.txt $function_name/*.py *.py; then
