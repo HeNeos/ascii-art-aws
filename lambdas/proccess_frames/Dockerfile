@@ -1,12 +1,12 @@
-# lambda/downsize_media/Dockerfile
 FROM public.ecr.aws/lambda/python:3.12
 
-# Copy requirements and function code
-COPY proccess_frames/requirements.txt ./
-COPY proccess_frames/lambda_function.py ./
-
-# Install dependencies
+COPY proccess_frames/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Command to run the Lambda function
-CMD ["lambda_function.lambda_handler"]
+COPY *.py ./lambdas/
+
+COPY proccess_frames/consolas.ttf .
+COPY proccess_frames/lambda_function.py ./lambdas/proccess_frames/lambda_function.py
+COPY proccess_frames/modules ./lambdas/proccess_frames/modules
+
+CMD ["lambdas.proccess_frames.lambda_function.lambda_handler"]

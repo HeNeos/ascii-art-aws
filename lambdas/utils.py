@@ -2,7 +2,10 @@ import io
 import os
 import tarfile
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
+
+from lambdas.font import Font
+from lambdas.custom_types import AsciiColors, AsciiImage, ImageExtension, ImageFile
 
 
 def calculate_scale(image_height: int) -> int:
@@ -51,15 +54,50 @@ def compress_and_save(
 
 
 def save_image(
-    s3_client, image: Image.Image, image_format: str, bucket_name: str, key: str
+    s3_client,
+    bucket_name: str,
+    image: Image.Image,
+    image_format: ImageExtension,
+    key: str,
 ) -> str:
     with io.BytesIO() as buffer:
-        image.save(buffer, format=image_format)
+        image.save(buffer, format=image_format.value)
         buffer.seek(0)
         s3_client.put_object(
             Body=buffer.getvalue(),
             Bucket=bucket_name,
-            ContentType=f"image/{image_format}",
+            ContentType=f"image/{image_format.value}",
             Key=key,
         )
+    return key
+
+
+def save_ascii_image(
+    s3_client,
+    bucket_name: str,
+    ascii_art: AsciiImage,
+    image_file: ImageFile,
+    image_colors: AsciiColors,
+) -> str:
+    image: Image.Image = Image.new(
+        "RGBA",
+        (Font.Width.value * len(ascii_art[0]), Font.Height.value * len(ascii_art)),
+        "black",
+    )
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.truetype("consolas.ttf", 14)
+    x, y = 0, 0
+    for row in range(len(ascii_art)):
+        for column in range(len(ascii_art[row])):
+            color = image_colors[row][column]
+            draw.text((x, y), ascii_art[row][column], font=font, fill=color)
+            x += Font.Width.value
+        x = 0
+        y += Font.Height.value
+
+    image_name: str = image_file.file_name
+    image_extension: ImageExtension = image_file.extension
+
+    key = f"{image_name}_ascii.{image_extension.value}"
+    save_image(s3_client, bucket_name, image, image_extension, key)
     return key
