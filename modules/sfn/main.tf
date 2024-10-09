@@ -65,6 +65,12 @@ resource "aws_iam_role" "step_function_role" {
   assume_role_policy = data.aws_iam_policy_document.step_function_policy_assume_role.json
 }
 
+resource "aws_iam_policy_attachment" "step_function_lambda_attachment" {
+  name       = "step-function-lambda-policy-${var.stage}"
+  roles      = [aws_iam_role.step_function_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaRole"
+}
+
 resource "aws_iam_policy_attachment" "step_function_attachment" {
   name       = "step-function-policy-${var.stage}"
   roles      = [aws_iam_role.step_function_role.name]
@@ -76,7 +82,7 @@ resource "aws_lambda_function" "downsize_media" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_media}:latest"
-  timeout       = 180
+  timeout       = 240
   memory_size   = 3008
   ephemeral_storage {
     size = 2048
@@ -125,8 +131,8 @@ resource "aws_lambda_function" "proccess_frames" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_proccess_frames}:latest"
-  timeout       = 60
-  memory_size   = 2048
+  timeout       = 180
+  memory_size   = 3008
   ephemeral_storage {
     size = 2048
   }
