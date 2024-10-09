@@ -33,7 +33,7 @@ logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
 bucket_name: str = ""
-batch_size: int = 200
+batch_size: int = 94
 
 
 def find_media_type(file_path: str) -> MediaFile:

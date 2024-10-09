@@ -9,7 +9,7 @@ from lambdas.custom_types import AsciiColors, AsciiImage, ImageExtension, ImageF
 
 
 def calculate_scale(image_height: int) -> int:
-    max_height = 150
+    max_height = 180
     new_scale: int = (image_height + max_height - 1) // max_height
     return new_scale
 
@@ -18,6 +18,17 @@ def split_file_name(file_path: str) -> tuple[str, str]:
     base_name: str = os.path.basename(file_path)
     file_name, file_extension = os.path.splitext(base_name)
     return file_name, file_extension.lstrip(".").lower()
+
+
+def list_folder(s3_client, bucket_name: str, path: str) -> list[str]:
+    paginator = s3_client.get_paginator("list_objects_v2")
+
+    return [
+        obj["Key"]
+        for page in paginator.paginate(Bucket=bucket_name, Prefix=path)
+        if "Contents" in page
+        for obj in page["Contents"]
+    ]
 
 
 def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
@@ -101,3 +112,14 @@ def save_ascii_image(
     key = f"{image_name}_ascii.{image_extension.value}"
     save_image(s3_client, bucket_name, image, image_extension, key)
     return key
+
+
+def unzip_file(gzip_path: str) -> list[str]:
+    with tarfile.open(gzip_path, "r:gz") as tar:
+        tar.extractall(path=os.path.dirname(gzip_path))
+        image_paths = [
+            os.path.join(os.path.dirname(gzip_path), member.name)
+            for member in tar.getmembers()
+            if member.isfile()
+        ]
+        return image_paths

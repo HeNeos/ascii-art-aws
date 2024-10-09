@@ -6,7 +6,13 @@ import boto3
 from PIL import Image
 from lambdas.proccess_frames.modules.ascii_dict import AsciiDict
 from lambdas.proccess_frames.modules.utils import map_to_char
-from lambdas.utils import download_from_s3, save_ascii_image, split_file_name
+from lambdas.utils import (
+    download_from_s3,
+    save_ascii_image,
+    split_file_name,
+    list_folder,
+    unzip_file,
+)
 from lambdas.custom_types import AsciiImage, AsciiColors, ImageExtension, ImageFile
 
 logger = logging.getLogger()
@@ -63,10 +69,26 @@ def lambda_handler(event, _) -> dict:
 
     bucket_name: str = event["bucket_name"]
     file_path: str = event["file_path"]
-    file_name, file_extension = split_file_name(file_path)
-    image_file = ImageFile(file_name, ImageExtension(file_extension))
+    is_video: bool = event["is_video"] == "true"
 
-    local_file: str = download_from_s3(s3_client, bucket_name, file_path)
+    frames: list[tuple[str, ImageFile]] = []
+    if is_video:
+        gzip_files: list[str] = list_folder(s3_client, bucket_name, file_path)
+        for gzip_file in gzip_files:
+            local_gzip_file: str = download_from_s3(s3_client, bucket_name, gzip_file)
+            frames_path: list[str] = unzip_file(local_gzip_file)
+            for frame_path in frames_path:
+                frame_name, frame_extension = split_file_name(frame_path)
+                image_file: ImageFile = ImageFile(
+                    frame_name, ImageExtension(frame_extension)
+                )
+                frames.append((frame_path, image_file))
+    else:
+        local_file: str = download_from_s3(s3_client, bucket_name, file_path)
+        file_name, file_extension = split_file_name(file_path)
+        image_file = ImageFile(file_name, ImageExtension(file_extension))
+        frames = [(local_file, image_file)]
 
-    ascii_art_key = ascii_convert(local_file, image_file)
-    return {"ascii_art_key": ascii_art_key}
+    output_keys: list[str] = [ascii_convert(frame[0], frame[1]) for frame in frames]
+
+    return {"ascii_art_key": output_keys}
