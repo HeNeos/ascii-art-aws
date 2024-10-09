@@ -42,7 +42,7 @@ resource "aws_iam_policy" "media_bucket" {
       {
         Effect   = "Allow",
         Action   = ["s3:Put*"],
-        Resource = ["${var.media_bucket_arn}/*", "${var.ascii_art_bucket_arn}", "${var.audio_bucket_arn}"]
+        Resource = ["${var.media_bucket_arn}/*", "${var.ascii_art_bucket_arn}/*", "${var.audio_bucket_arn}/*"]
       }
     ]
   })
