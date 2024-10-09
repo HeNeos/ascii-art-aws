@@ -67,7 +67,7 @@ def rescale_image(image: Image.Image, image_file: ImageFile) -> str:
     )
 
 
-def resize_frame(frame_data: FrameData) -> tuple[Image.Image, int]:
+def resize_frame(frame_data: FrameData) -> tuple[Image.Image, str]:
     frame_image: MatLike = cast(MatLike, frame_data.frame)
     height, width, _ = frame_image.shape
     scale = calculate_scale(height)
@@ -84,7 +84,7 @@ def resize_frame(frame_data: FrameData) -> tuple[Image.Image, int]:
                 cv2.COLOR_BGR2RGB,
             )
         ),
-        frame_data.frame_id,
+        f"{frame_data.frame_id:06d}",
     )
 
 
@@ -116,8 +116,8 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> st
 
         compress_and_save(
             s3_client,
-            resized_frames,
             bucket_name,
+            resized_frames,
             f"proccessed/{video_name}/{(last_frame_id):06d}-{frame_id-1:06d}.tar.gz",
         )
         last_frame_id = frame_id

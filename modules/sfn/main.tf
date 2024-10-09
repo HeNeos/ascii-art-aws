@@ -144,17 +144,80 @@ resource "aws_sfn_state_machine" "step_function" {
 
   definition = <<-DEFINITION
   {
-    "Comment": "My Lambda Orchestration",
-    "StartAt": "FirstLambda",
+    "Comment": "AsciiArt State Machine",
+    "StartAt": "DownsizeMedia",
     "States": {
-      "FirstLambda": {
+      "DownsizeMedia": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.downsize_media.arn}",
-        "Next": "SecondLambda"
+        "Next": "IsVideo"
       },
-      "SecondLambda": {
+      "IsVideo": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.is_video",
+            "StringEquals": "true",
+            "Next": "ProcessVideo"
+          },
+          {
+            "Variable": "$.is_video",
+            "StringEquals": "false",
+            "Next": "ProcessImage"
+          }
+        ]
+      },
+      "ProcessVideo": {
+        "Type": "Parallel",
+        "Branches": [
+          {
+            "StartAt": "ExtractAudio",
+            "States": {
+              "ExtractAudio": {
+                "Type": "Task",
+                "Resource": "${aws_lambda_function.extract_audio.arn}",
+                "End": true
+              }
+            }
+          },
+          {
+            "StartAt": "MapProcessFrames",
+            "States": {
+              "MapProcessFrames": {
+                "Type": "Map",
+                "ItemProcessor": {
+                  "ProcessorConfig": {
+                    "Mode": "DISTRIBUTED",
+                    "ExecutionType": "EXPRESS"
+                  },
+                  "StartAt": "ProcessFrame",
+                  "States": {
+                    "ProcessFrame": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "Payload.$": "$",
+                        "FunctionName": "${aws_lambda_function.proccess_frames.arn}"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                "End": true
+              }
+            }
+          }
+        ],
+        "Next": "MergeFrames"
+      },
+      "ProcessImage": {
         "Type": "Task",
-        "Resource": "${aws_lambda_function.extract_audio.arn}",
+        "Resource": "${aws_lambda_function.proccess_frames.arn}",
+        "End": true
+      },
+      "MergeFrames": {
+        "Type": "Task",
+        "Resource": "${aws_lambda_function.merge_frames.arn}",
         "End": true
       }
     }

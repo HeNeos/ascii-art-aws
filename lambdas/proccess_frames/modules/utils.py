@@ -1,4 +1,8 @@
+from PIL import Image, ImageDraw, ImageFont
+
+from lambdas.font import Font
 from lambdas.proccess_frames.modules.ascii_dict import AsciiDict
+from lambdas.custom_types import AsciiImage, AsciiColors
 
 
 def map_to_char(gray_scale: float, ascii_dict: AsciiDict) -> str:
@@ -6,20 +10,20 @@ def map_to_char(gray_scale: float, ascii_dict: AsciiDict) -> str:
     return ascii_dict.value[position]
 
 
-# def calculate_scale(
-#     image_size: Tuple[int, int], scale: Optional[Union[int, float]] = None
-# ) -> int:
-#     if scale:
-#         return int(scale)
-#     max_length = 200
-#     max_size = max(image_size)
-#     new_scale: int = (max_size + max_length - 1) // max_length
-#     return new_scale
-
-
-# def cut_grid(grid: List[List[str]]) -> List[List[str]]:
-#     resized_grid: List[List[str]] = []
-#     for line in grid:
-#         if not all(column == " " for column in line):
-#             resized_grid.append(line)
-#     return resized_grid
+def create_ascii_image(ascii_art: AsciiImage, image_colors: AsciiColors) -> Image.Image:
+    image: Image.Image = Image.new(
+        "RGB",
+        (Font.Width.value * len(ascii_art[0]), Font.Height.value * len(ascii_art)),
+        "black",
+    )
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.truetype("consolas.ttf", 14)
+    x, y = 0, 0
+    for row in range(len(ascii_art)):
+        for column in range(len(ascii_art[row])):
+            color = image_colors[row][column]
+            draw.text((x, y), ascii_art[row][column], font=font, fill=color)
+            x += Font.Width.value
+        x = 0
+        y += Font.Height.value
+    return image

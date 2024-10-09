@@ -2,10 +2,9 @@ import io
 import os
 import tarfile
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
-from lambdas.font import Font
-from lambdas.custom_types import AsciiColors, AsciiImage, ImageExtension, ImageFile
+from lambdas.custom_types import ImageExtension
 
 
 def calculate_scale(image_height: int) -> int:
@@ -46,17 +45,17 @@ def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
 
 
 def compress_and_save(
-    s3_client, frames: list[tuple[Image.Image, int]], bucket_name: str, key: str
+    s3_client, bucket_name: str, frames: list[tuple[Image.Image, str]], key: str
 ):
     with io.BytesIO() as buffer:
         with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
             for frame_data in frames:
-                frame_image, frame_id = frame_data
+                frame_image, frame_name = frame_data
                 frame_buffer = io.BytesIO()
                 frame_image.save(frame_buffer, format="PNG")
                 frame_buffer.seek(0)
 
-                tarinfo = tarfile.TarInfo(name=f"{frame_id:06d}.png")
+                tarinfo = tarfile.TarInfo(name=f"{frame_name}.png")
                 tarinfo.size = len(frame_buffer.getvalue())
 
                 tar.addfile(tarinfo, fileobj=frame_buffer)
@@ -80,37 +79,6 @@ def save_image(
             ContentType=f"image/{image_format.value}",
             Key=key,
         )
-    return key
-
-
-def save_ascii_image(
-    s3_client,
-    bucket_name: str,
-    ascii_art: AsciiImage,
-    image_file: ImageFile,
-    image_colors: AsciiColors,
-) -> str:
-    image: Image.Image = Image.new(
-        "RGB",
-        (Font.Width.value * len(ascii_art[0]), Font.Height.value * len(ascii_art)),
-        "black",
-    )
-    draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("consolas.ttf", 14)
-    x, y = 0, 0
-    for row in range(len(ascii_art)):
-        for column in range(len(ascii_art[row])):
-            color = image_colors[row][column]
-            draw.text((x, y), ascii_art[row][column], font=font, fill=color)
-            x += Font.Width.value
-        x = 0
-        y += Font.Height.value
-
-    image_name: str = image_file.file_name
-    image_extension: ImageExtension = image_file.extension
-
-    key = f"{image_name}_ascii.{image_extension.value}"
-    save_image(s3_client, bucket_name, image, image_extension, key)
     return key
 
 
