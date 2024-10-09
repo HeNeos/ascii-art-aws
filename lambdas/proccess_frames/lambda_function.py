@@ -1,8 +1,20 @@
+import logging
+import os
+
+import boto3
+
 from PIL import Image
 from lambdas.proccess_frames.modules.ascii_dict import AsciiDict
 from lambdas.proccess_frames.modules.utils import map_to_char
-from lambdas.proccess_frames.modules.save import save_ascii
-from lambdas.custom_types import AsciiImage, AsciiColors
+from lambdas.utils import download_from_s3, save_ascii_image, split_file_name
+from lambdas.custom_types import AsciiImage, AsciiColors, ImageExtension, ImageFile
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+s3_client = boto3.client("s3")
+
+ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 
 
 def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
@@ -30,20 +42,31 @@ def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
     return grid, image_colors
 
 
-def ascii_convert(image_path: str) -> AsciiImage:
-
-    image_name, image_extension = image_path.split(".")
+def ascii_convert(image_path: str, image_file: ImageFile) -> str:
+    image_name = image_file.file_name
+    image_extension = image_file.extension
     image: Image.Image = Image.open(image_path).convert("RGB")
     grid, image_colors = process_image(image=image)
+    image_file = ImageFile(image_name, ImageExtension(image_extension))
 
-    save_ascii(
+    return save_ascii_image(
+        s3_client=s3_client,
+        bucket_name=ASCII_ART_BUCKET,
         ascii_art=grid,
-        image_name=image_name,
+        image_file=image_file,
         image_colors=image_colors,
     )
-    return grid
 
 
-def lambda_handler(event, context):
-    ascii_convert()
-    return
+def lambda_handler(event, _) -> dict:
+    logger.info(event)
+
+    bucket_name: str = event["bucket_name"]
+    file_path: str = event["file_path"]
+    file_name, file_extension = split_file_name(file_path)
+    image_file = ImageFile(file_name, ImageExtension(file_extension))
+
+    local_file: str = download_from_s3(s3_client, bucket_name, file_path)
+
+    ascii_art_key = ascii_convert(local_file, image_file)
+    return {"ascii_art_key": ascii_art_key}

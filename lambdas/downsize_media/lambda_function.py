@@ -60,9 +60,9 @@ def rescale_image(image: Image.Image, image_file: ImageFile) -> str:
     resized_image = image.resize((resized_width, resized_height))
     return save_image(
         s3_client,
-        resized_image,
-        image_extension.value,
         bucket_name,
+        resized_image,
+        image_extension,
         f"proccessed/{resized_image_name}",
     )
 
