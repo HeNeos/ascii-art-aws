@@ -41,6 +41,8 @@ module "sfn" {
   audio_bucket_arn                     = module.storage.audio_bucket_arn
   ascii_art_bucket_arn                 = module.storage.ascii_art_bucket_arn
   media_bucket_name                    = module.storage.media_bucket_name
+  audio_bucket_name                    = module.storage.audio_bucket_name
+  ascii_art_bucket_name                = module.storage.ascii_art_bucket_name
   lambda_function_name_downsize_media  = "${local.function_name_downsize_media}-${var.stage}"
   lambda_function_name_extract_audio   = "${local.function_name_extract_audio}-${var.stage}"
   lambda_function_name_merge_frames    = "${local.function_name_merge_frames}-${var.stage}"

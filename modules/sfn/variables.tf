@@ -49,3 +49,11 @@ variable "ascii_art_bucket_arn" {
 variable "media_bucket_name" {
   type = string
 }
+
+variable "audio_bucket_name" {
+  type = string
+}
+
+variable "ascii_art_bucket_name" {
+  type = string
+}

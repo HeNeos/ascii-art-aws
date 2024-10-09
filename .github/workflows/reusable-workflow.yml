@@ -244,7 +244,7 @@ jobs:
           cd lambdas
           for function_name in "${!function_images[@]}"; do
               repo_name="${function_images[$function_name]}"
-              if git diff --quiet HEAD^ HEAD -- $function_name/requirement.txt $function_name/*.py *.py; then
+              if git diff --quiet HEAD^ HEAD -- $function_name/requirement.txt $function_name/*.py $function_name/Dockerfile *.py; then
                 echo "No changes, skipping lambda"
               else
                 (

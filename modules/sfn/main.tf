@@ -42,7 +42,7 @@ resource "aws_iam_policy" "media_bucket" {
       {
         Effect   = "Allow",
         Action   = ["s3:Put*"],
-        Resource = "${var.media_bucket_arn}/*"
+        Resource = ["${var.media_bucket_arn}/*", "${var.ascii_art_bucket_arn}", "${var.audio_bucket_arn}"]
       }
     ]
   })
@@ -126,6 +126,15 @@ resource "aws_lambda_function" "proccess_frames" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_proccess_frames}:latest"
   timeout       = 60
+  memory_size   = 1024
+  ephemeral_storage {
+    size = 1024
+  }
+  environment {
+    variables = {
+      ASCII_ART_BUCKET = var.ascii_art_bucket_name
+    }
+  }
 }
 
 

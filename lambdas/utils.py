@@ -80,7 +80,7 @@ def save_ascii_image(
     image_colors: AsciiColors,
 ) -> str:
     image: Image.Image = Image.new(
-        "RGBA",
+        "RGB",
         (Font.Width.value * len(ascii_art[0]), Font.Height.value * len(ascii_art)),
         "black",
     )
