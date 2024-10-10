@@ -59,8 +59,8 @@ def lambda_handler(event, _) -> dict:
     logger.info(event)
 
     bucket_name: str = event["bucket_name"]
-    file_path: str = event["file_path"]
-    is_video: bool = event["is_video"] == "true"
+    file_path: str = event["processed_key"]
+    is_video: bool = event["is_video"]
 
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
     frames_path: list[str] = [local_file]

@@ -33,7 +33,7 @@ logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
 bucket_name: str = ""
-batch_size: int = 47
+batch_size: int = 70
 
 
 def find_media_type(file_path: str) -> MediaFile:
@@ -88,13 +88,15 @@ def resize_frame(frame_data: FrameData) -> tuple[Image.Image, str]:
     )
 
 
-def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> str:
+def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> list[str]:
     frame_id: int = 1
     last_frame_id: int = 1
     video_name: str = video_file.file_name
     continue_proccessing: bool = True
 
     logger.info(cpu_count())
+
+    compressed_frames_path: list[str] = []
 
     while continue_proccessing:
         frames: Frames = []
@@ -114,18 +116,23 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> st
 
         logger.info(f"Finished resize: {psutil.virtual_memory()[3]/1000000}")
 
+        compressed_frame_path = (
+            f"proccessed/{video_name}/{(last_frame_id):06d}-{frame_id-1:06d}.tar.gz"
+        )
+
+        compressed_frames_path.append(compressed_frame_path)
         compress_and_save(
             s3_client,
             bucket_name,
             resized_frames,
-            f"proccessed/{video_name}/{(last_frame_id):06d}-{frame_id-1:06d}.tar.gz",
+            compressed_frame_path,
         )
         last_frame_id = frame_id
         resized_frames.clear()
 
         logger.info(f"Finished saving: {psutil.virtual_memory()[3]/1000000}")
 
-    return f"proccessed/{video_name}"
+    return compressed_frames_path
 
 
 def lambda_handler(event: dict, _) -> dict:
@@ -140,7 +147,12 @@ def lambda_handler(event: dict, _) -> dict:
     is_video: bool = media_file.extension in VideoExtension
     is_image: bool = media_file.extension in ImageExtension
 
-    response = {"key": file_path, "is_video": is_video, "is_image": is_image}
+    response = {
+        "key": file_path,
+        "is_video": is_video,
+        "is_image": is_image,
+        "bucket_name": bucket_name,
+    }
 
     if is_video:
         video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)
@@ -149,8 +161,10 @@ def lambda_handler(event: dict, _) -> dict:
         return {**response, "proccessed_key": proccessed_key}
     if is_image:
         image: Image.Image = Image.open(local_file).convert("RGB")
-        proccessed_key = rescale_image(image, cast(ImageFile, media_file))
-        return {**response, "proccessed_key": proccessed_key}
+        return {
+            **response,
+            "proccessed_key": rescale_image(image, cast(ImageFile, media_file)),
+        }
 
     logger.info(response)
     return response

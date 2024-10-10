@@ -163,12 +163,12 @@ resource "aws_sfn_state_machine" "step_function" {
         "Choices": [
           {
             "Variable": "$.is_video",
-            "StringEquals": "true",
+            "BooleanEquals": true,
             "Next": "ProcessVideo"
           },
           {
-            "Variable": "$.is_video",
-            "StringEquals": "false",
+            "Variable": "$.is_image",
+            "BooleanEquals": true,
             "Next": "ProcessImage"
           }
         ]
@@ -191,6 +191,14 @@ resource "aws_sfn_state_machine" "step_function" {
             "States": {
               "MapProcessFrames": {
                 "Type": "Map",
+                "ItemsPath": "$.proccessed_key",
+                "Parameters": {
+                  "key.$": "$.key",
+                  "bucket_name.$": "$.bucket_name",
+                  "is_video.$": "$.is_video",
+                  "is_image.$": "$.is_image",
+                  "proccessed_key.$": "$$.Map.Item.Value"
+                },
                 "ItemProcessor": {
                   "ProcessorConfig": {
                     "Mode": "DISTRIBUTED",
