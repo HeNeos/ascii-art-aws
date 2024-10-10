@@ -71,10 +71,12 @@ def lambda_handler(event: dict, _) -> dict:
         else:
             splitted_video = video_resized.subclip(start_time, end_time)
         s3_splitted_video_key = (
-            f"{media_file.file_name}-{batch_id:03d}.{media_file.extension}"
+            f"{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}"
         )
         local_splitted_video_path = f"/tmp/{s3_splitted_video_key}"
-        splitted_video.write_videofile(local_splitted_video_path)
+        splitted_video.write_videofile(
+            local_splitted_video_path, temp_audiofile="/tmp/temp_audio.mp3"
+        )
         processed_keys.append(
             save_video(
                 s3_client,
