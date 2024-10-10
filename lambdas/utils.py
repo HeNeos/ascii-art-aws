@@ -82,6 +82,12 @@ def save_image(
     return key
 
 
+def save_video(s3_client, bucket_name: str, local_video_path: str, key: str) -> str:
+    with open(local_video_path, "rb") as f:
+        s3_client.upload_fileobj(f, bucket_name, key)
+        return key
+
+
 def unzip_file(gzip_path: str) -> list[str]:
     with tarfile.open(gzip_path, "r:gz") as tar:
         tar.extractall(path=os.path.dirname(gzip_path))

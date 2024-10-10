@@ -13,6 +13,10 @@ variable "lambda_image_downsize_media" {
   type = string
 }
 
+variable "lambda_image_downsize_video" {
+  type = string
+}
+
 variable "lambda_image_extract_audio" {
   type = string
 }

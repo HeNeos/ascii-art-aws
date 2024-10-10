@@ -8,6 +8,10 @@ resource "aws_ecr_repository" "downsize_media" {
   name = var.lambda_function_name_downsize_media
 }
 
+resource "aws_ecr_repository" "downsize_video" {
+  name = var.lambda_function_name_downsize_video
+}
+
 resource "aws_ecr_repository" "extract_audio" {
   name = var.lambda_function_name_extract_audio
 }

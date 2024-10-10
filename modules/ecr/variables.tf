@@ -2,6 +2,10 @@ variable "lambda_function_name_downsize_media" {
   type = string
 }
 
+variable "lambda_function_name_downsize_video" {
+  type = string
+}
+
 variable "lambda_function_name_extract_audio" {
   type = string
 }

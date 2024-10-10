@@ -89,6 +89,18 @@ resource "aws_lambda_function" "downsize_media" {
   }
 }
 
+resource "aws_lambda_function" "downsize_video" {
+  function_name = var.lambda_function_name_downsize_video
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
+  image_uri     = "${var.lambda_image_downsize_video}:latest"
+  timeout       = 240
+  memory_size   = 3008
+  ephemeral_storage {
+    size = 2048
+  }
+}
+
 resource "aws_lambda_permission" "allow_bucket" {
   statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"

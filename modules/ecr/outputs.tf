@@ -2,6 +2,10 @@ output "ecr_repo_downsize_media_url" {
   value = aws_ecr_repository.downsize_media.repository_url
 }
 
+output "ecr_repo_downsize_video_url" {
+  value = aws_ecr_repository.downsize_video.repository_url
+}
+
 output "ecr_repo_extract_audio_url" {
   value = aws_ecr_repository.extract_audio.repository_url
 }
