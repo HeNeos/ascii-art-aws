@@ -16,6 +16,6 @@ resource "aws_ecr_repository" "merge_frames" {
   name = var.lambda_function_name_merge_frames
 }
 
-resource "aws_ecr_repository" "proccess_frames" {
-  name = var.lambda_function_name_proccess_frames
+resource "aws_ecr_repository" "process_frames" {
+  name = var.lambda_function_name_process_frames
 }

@@ -63,7 +63,7 @@ def rescale_image(image: Image.Image, image_file: ImageFile) -> str:
         bucket_name,
         resized_image,
         image_extension,
-        f"proccessed/{resized_image_name}",
+        f"processed/{resized_image_name}",
     )
 
 
@@ -92,13 +92,13 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> li
     frame_id: int = 1
     last_frame_id: int = 1
     video_name: str = video_file.file_name
-    continue_proccessing: bool = True
+    continue_processing: bool = True
 
     logger.info(cpu_count())
 
     compressed_frames_path: list[str] = []
 
-    while continue_proccessing:
+    while continue_processing:
         frames: Frames = []
         for _ in range(batch_size):
             ret, frame = video_capture.read()
@@ -108,7 +108,7 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> li
                 )
                 frame_id += 1
             else:
-                continue_proccessing = False
+                continue_processing = False
                 break
         logger.info(f"Finished extract frames: {psutil.virtual_memory()[3]/1000000}")
         pool = Pool(cpu_count())
@@ -117,7 +117,7 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> li
         logger.info(f"Finished resize: {psutil.virtual_memory()[3]/1000000}")
 
         compressed_frame_path = (
-            f"proccessed/{video_name}/{(last_frame_id):06d}-{frame_id-1:06d}.tar.gz"
+            f"processed/{video_name}/{(last_frame_id):06d}-{frame_id-1:06d}.tar.gz"
         )
 
         compressed_frames_path.append(compressed_frame_path)
@@ -156,14 +156,14 @@ def lambda_handler(event: dict, _) -> dict:
 
     if is_video:
         video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)
-        proccessed_key = extract_frames(video_capture, cast(VideoFile, media_file))
+        processed_key = extract_frames(video_capture, cast(VideoFile, media_file))
         video_capture.release()
-        return {**response, "proccessed_key": proccessed_key}
+        return {**response, "processed_key": processed_key}
     if is_image:
         image: Image.Image = Image.open(local_file).convert("RGB")
         return {
             **response,
-            "proccessed_key": rescale_image(image, cast(ImageFile, media_file)),
+            "processed_key": rescale_image(image, cast(ImageFile, media_file)),
         }
 
     logger.info(response)

@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 
 from lambdas.font import Font
-from lambdas.proccess_frames.modules.ascii_dict import AsciiDict
+from lambdas.process_frames.modules.ascii_dict import AsciiDict
 from lambdas.custom_types import AsciiImage, AsciiColors
 
 

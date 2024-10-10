@@ -126,11 +126,11 @@ resource "aws_lambda_function" "merge_frames" {
   timeout       = 60
 }
 
-resource "aws_lambda_function" "proccess_frames" {
-  function_name = var.lambda_function_name_proccess_frames
+resource "aws_lambda_function" "process_frames" {
+  function_name = var.lambda_function_name_process_frames
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
-  image_uri     = "${var.lambda_image_proccess_frames}:latest"
+  image_uri     = "${var.lambda_image_process_frames}:latest"
   timeout       = 180
   memory_size   = 3008
   ephemeral_storage {
@@ -191,13 +191,13 @@ resource "aws_sfn_state_machine" "step_function" {
             "States": {
               "MapProcessFrames": {
                 "Type": "Map",
-                "ItemsPath": "$.proccessed_key",
+                "ItemsPath": "$.processed_key",
                 "Parameters": {
                   "key.$": "$.key",
                   "bucket_name.$": "$.bucket_name",
                   "is_video.$": "$.is_video",
                   "is_image.$": "$.is_image",
-                  "proccessed_key.$": "$$.Map.Item.Value"
+                  "processed_key.$": "$$.Map.Item.Value"
                 },
                 "ItemProcessor": {
                   "ProcessorConfig": {
@@ -211,7 +211,7 @@ resource "aws_sfn_state_machine" "step_function" {
                       "Resource": "arn:aws:states:::lambda:invoke",
                       "Parameters": {
                         "Payload.$": "$",
-                        "FunctionName": "${aws_lambda_function.proccess_frames.arn}"
+                        "FunctionName": "${aws_lambda_function.process_frames.arn}"
                       },
                       "End": true
                     }
@@ -226,7 +226,7 @@ resource "aws_sfn_state_machine" "step_function" {
       },
       "ProcessImage": {
         "Type": "Task",
-        "Resource": "${aws_lambda_function.proccess_frames.arn}",
+        "Resource": "${aws_lambda_function.process_frames.arn}",
         "End": true
       },
       "MergeFrames": {

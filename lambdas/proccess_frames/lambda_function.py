@@ -4,8 +4,8 @@ import os
 import boto3
 
 from PIL import Image
-from lambdas.proccess_frames.modules.ascii_dict import AsciiDict
-from lambdas.proccess_frames.modules.utils import create_ascii_image, map_to_char
+from lambdas.process_frames.modules.ascii_dict import AsciiDict
+from lambdas.process_frames.modules.utils import create_ascii_image, map_to_char
 from lambdas.utils import (
     compress_and_save,
     download_from_s3,

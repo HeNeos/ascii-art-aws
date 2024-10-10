@@ -10,6 +10,6 @@ output "ecr_repo_merge_frames_url" {
   value = aws_ecr_repository.merge_frames.repository_url
 }
 
-output "ecr_repo_proccess_frames_url" {
-  value = aws_ecr_repository.proccess_frames.repository_url
+output "ecr_repo_process_frames_url" {
+  value = aws_ecr_repository.process_frames.repository_url
 }
