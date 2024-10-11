@@ -48,7 +48,7 @@ def save_split_video(video_metadata: SplitVideo) -> str:
 
 
 def split_video(video: VideoFileClip, media_file: VideoFile) -> list[str]:
-    batch_duration = 1 + int((video.duration**0.5) / 3)
+    batch_duration = 1 + int((video.duration**0.5) / 4)
 
     videos_metadata: list[SplitVideo] = []
     start_time: int = 0
@@ -92,12 +92,12 @@ def lambda_handler(event: dict, _) -> dict:
 
     video = VideoFileClip(local_file)
     video_width, video_height = video.size
-    scale_factor = 80 / video_height
+    scale_factor = 90 / video_height
 
     video_resized = video.resize(
         newsize=(
             int(Font.Height.value / Font.Width.value * scale_factor * video_width),
-            80,
+            90,
         )
     )
 

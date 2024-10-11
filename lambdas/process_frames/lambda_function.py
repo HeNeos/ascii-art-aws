@@ -44,7 +44,7 @@ def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
 
     ascii_dict = (
         AsciiDict.HighAsciiDict
-        if width * height >= 150 * 150
+        if width * height >= 180 * 180
         else AsciiDict.LowAsciiDict
     )
 
@@ -113,7 +113,8 @@ def lambda_handler(event, _) -> dict:
             "/tmp/temp-video.mp4",
             temp_audiofile="/tmp/null-audio.mp3",
             codec="libx264",
-            bitrate="2000k",
+            bitrate="8000K",
+            ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "slower"],
         )
         logger.info("Finish save local video")
         key = save_video(s3_client, ASCII_ART_BUCKET, "/tmp/temp-video.mp4", file_path)
