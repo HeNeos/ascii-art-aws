@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
 bucket_name: str = ""
-video: VideoFileClip | None = None
+video_resized: VideoFileClip | None = None
 
 
 @dataclass
@@ -31,16 +31,17 @@ class SplitVideo:
 
 
 def save_split_video(video_metadata: SplitVideo) -> str:
-    if video is None:
+    if video_resized is None:
         return ""
-    splitted_video = video.subclip(
+    splitted_video = video_resized.subclip(
         video_metadata.start_time, video_metadata.end_time
     ).without_audio()
     folder_name = f"{video_metadata.video_name}/{video_metadata.video_name}"
-    key = (
-        f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension}"
+    key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
+    splitted_video.write_videofile(
+        video_metadata.local_path,
+        temp_audiofile=f"/tmp/{video_metadata.batch_id:03d}-downsize.mp3",
     )
-    splitted_video.write_videofile(video_metadata.local_path)
     return save_video(
         s3_client, bucket_name, video_metadata.local_path, f"processed/{key}"
     )
@@ -60,7 +61,7 @@ def split_video(video: VideoFileClip, media_file: VideoFile) -> list[str]:
             SplitVideo(
                 start_time=start_time,
                 end_time=end_time,
-                local_path="",
+                local_path=f"/tmp/{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}",
                 batch_id=batch_id,
                 video_name=media_file.file_name,
                 video_extension=media_file.extension,
@@ -72,6 +73,8 @@ def split_video(video: VideoFileClip, media_file: VideoFile) -> list[str]:
         end_time += batch_duration
         batch_id += 1
 
+    logger.info("Start splitting")
+
     pool = Pool(cpu_count())
     processed_keys = pool.map(save_split_video, videos_metadata)
     return processed_keys
@@ -79,6 +82,7 @@ def split_video(video: VideoFileClip, media_file: VideoFile) -> list[str]:
 
 def lambda_handler(event: dict, _) -> dict:
     global bucket_name
+    global video_resized
     logger.info(event)
     file_path: str = event["key"]
     bucket_name = event["bucket_name"]
@@ -110,11 +114,13 @@ def lambda_handler(event: dict, _) -> dict:
         f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
     )
 
+    processed_key = split_video(video_resized, media_file)
+
     return {
         "key": file_path,
         "is_video": True,
         "is_image": False,
         "bucket_name": bucket_name,
         "downsize_video": f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
-        "processed_key": split_video(video_resized, media_file),
+        "processed_key": processed_key,
     }
