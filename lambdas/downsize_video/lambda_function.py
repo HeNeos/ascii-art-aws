@@ -57,7 +57,21 @@ def lambda_handler(event: dict, _) -> dict:
         height=180,
         width=int(Font.Height.value / Font.Width.value * scale_factor * video_width),
     )
-    batch_duration = 1 + int((video.duration**0.5) / 3)
+
+    video_folder_name = f"{media_file.file_name}/{media_file.file_name}"
+    video_resized.write_videofile(
+        f"/tmp/{media_file.file_name}-downsize.{media_file.extension.value}",
+        temp_audiofile=f"/tmp/{media_file.file_name}-downsize.mp3",
+    )
+
+    save_video(
+        s3_client,
+        bucket_name,
+        f"/tmp/{media_file.file_name}-downsize.{media_file.extension.value}",
+        f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
+    )
+
+    batch_duration = 1 + int((video.duration**0.5) / 2)
 
     start_time: int = 0
     end_time: int = start_time + batch_duration
@@ -65,18 +79,19 @@ def lambda_handler(event: dict, _) -> dict:
     continue_splitting: bool = True
     processed_keys: list[str] = []
     while continue_splitting:
+        logger.info([batch_id, start_time, end_time, video.duration])
         if end_time >= video.duration:
-            splitted_video = video_resized.subclip(start_time, None)
+            splitted_video = video_resized.subclip(start_time, None).without_audio()
             continue_splitting = False
         else:
-            splitted_video = video_resized.subclip(start_time, end_time)
+            splitted_video = video_resized.subclip(start_time, end_time).without_audio()
         s3_splitted_video_key = (
-            f"{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}"
+            f"{video_folder_name}-{batch_id:03d}.{media_file.extension.value}"
         )
-        local_splitted_video_path = f"/tmp/{s3_splitted_video_key}"
-        splitted_video.write_videofile(
-            local_splitted_video_path, temp_audiofile="/tmp/temp_audio.mp3"
+        local_splitted_video_path = (
+            f"/tmp/{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}"
         )
+        splitted_video.write_videofile(local_splitted_video_path)
         processed_keys.append(
             save_video(
                 s3_client,
@@ -86,7 +101,7 @@ def lambda_handler(event: dict, _) -> dict:
             )
         )
         start_time = end_time
-        end_time + batch_duration
+        end_time += batch_duration
         batch_id += 1
 
     return {**response, "processed_key": processed_keys}
