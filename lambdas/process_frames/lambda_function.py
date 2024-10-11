@@ -110,7 +110,10 @@ def lambda_handler(event, _) -> dict:
         logger.info("Finish ascii-ed frames")
         video = ImageSequenceClip([np.array(frame) for frame in ascii_frames], fps=24)
         video.write_videofile(
-            "/tmp/temp-video.mp4", temp_audiofile="/tmp/null-audio.mp3"
+            "/tmp/temp-video.mp4",
+            temp_audiofile="/tmp/null-audio.mp3",
+            codec="libx264",
+            bitrate="2000k",
         )
         logger.info("Finish save local video")
         key = save_video(s3_client, ASCII_ART_BUCKET, "/tmp/temp-video.mp4", file_path)
