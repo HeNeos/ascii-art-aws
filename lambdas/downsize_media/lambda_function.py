@@ -42,8 +42,8 @@ def rescale_image(image: Image.Image, image_file: ImageFile, bucket_name: str) -
 
 def lambda_handler(event: dict, _) -> dict:
     logger.info(event)
-    file_path: str = event["Records"][0]["s3"]["object"]["key"]
-    bucket_name = event["Records"][0]["s3"]["bucket"]["name"]
+    file_path: str = event["key"]
+    bucket_name = event["bucket_name"]
 
     media_file: MediaFile = find_media_type(file_path)
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)

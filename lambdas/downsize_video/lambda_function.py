@@ -54,8 +54,8 @@ def split_video(
 
 def lambda_handler(event: dict, _) -> dict:
     logger.info(event)
-    file_path: str = event["Records"][0]["s3"]["object"]["key"]
-    bucket_name = event["Records"][0]["s3"]["bucket"]["name"]
+    file_path: str = event["key"]
+    bucket_name = event["bucket_name"]
 
     media_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
@@ -84,12 +84,11 @@ def lambda_handler(event: dict, _) -> dict:
         f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
     )
 
-    response = {
+    return {
         "key": file_path,
+        "is_video": True,
+        "is_image": False,
         "bucket_name": bucket_name,
         "downsize_video": f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
+        "processed_key": split_video(video_resized, media_file, bucket_name),
     }
-
-    processed_keys: list[str] = split_video(video_resized, media_file, bucket_name)
-
-    return {**response, "processed_key": processed_keys}

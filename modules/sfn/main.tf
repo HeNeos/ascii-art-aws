@@ -82,10 +82,10 @@ resource "aws_lambda_function" "downsize_media" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_media}:latest"
-  timeout       = 240
+  timeout       = 30
   memory_size   = 3008
   ephemeral_storage {
-    size = 2048
+    size = 1024
   }
 }
 
@@ -146,7 +146,7 @@ resource "aws_lambda_function" "process_frames" {
   timeout       = 180
   memory_size   = 3008
   ephemeral_storage {
-    size = 2048
+    size = 4096
   }
   environment {
     variables = {
@@ -163,27 +163,32 @@ resource "aws_sfn_state_machine" "step_function" {
   definition = <<-DEFINITION
   {
     "Comment": "AsciiArt State Machine",
-    "StartAt": "DownsizeMedia",
+    "StartAt": "IsVideo",
     "States": {
-      "DownsizeMedia": {
-        "Type": "Task",
-        "Resource": "${aws_lambda_function.downsize_media.arn}",
-        "Next": "IsVideo"
-      },
       "IsVideo": {
         "Type": "Choice",
         "Choices": [
           {
             "Variable": "$.is_video",
             "BooleanEquals": true,
-            "Next": "ProcessVideo"
+            "Next": "DownsizeVideo"
           },
           {
             "Variable": "$.is_image",
             "BooleanEquals": true,
-            "Next": "ProcessImage"
+            "Next": "DownsizeMedia"
           }
         ]
+      },
+      "DownsizeMedia": {
+        "Type": "Task",
+        "Resource": "${aws_lambda_function.downsize_media.arn}",
+        "Next": "ProcessImage"
+      },
+      "DownsizeVideo": {
+        "Type": "Task",
+        "Resource": "${aws_lambda_function.downsize_video.arn}",
+        "Next": "ProcessVideo"
       },
       "ProcessVideo": {
         "Type": "Parallel",
