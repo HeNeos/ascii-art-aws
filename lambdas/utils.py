@@ -4,11 +4,17 @@ import tarfile
 
 from PIL import Image
 
-from lambdas.custom_types import ImageExtension
+from lambdas.custom_types import (
+    ImageExtension,
+    MediaFile,
+    VideoFile,
+    ImageFile,
+    VideoExtension,
+)
 
 
 def calculate_scale(image_height: int) -> int:
-    max_height = 75
+    max_height = 150
     new_scale: int = (image_height + max_height - 1) // max_height
     return new_scale
 
@@ -17,6 +23,19 @@ def split_file_name(file_path: str) -> tuple[str, str]:
     base_name: str = os.path.basename(file_path)
     file_name, file_extension = os.path.splitext(base_name)
     return file_name, file_extension.lstrip(".").lower()
+
+
+def find_media_type(file_path: str) -> MediaFile:
+    file_name, file_extension = split_file_name(file_path)
+    if file_extension in ImageExtension._value2member_map_:
+        if ImageExtension(file_extension) is ImageExtension.JPG:
+            return ImageFile(file_name, ImageExtension.JPEG)
+        else:
+            return ImageFile(file_name, ImageExtension(file_extension))
+    if file_extension in VideoExtension._value2member_map_:
+        return VideoFile(file_name, VideoExtension(file_extension))
+
+    raise ValueError(f"Unsupported file extension: {file_extension}")
 
 
 def list_folder(s3_client, bucket_name: str, path: str) -> list[str]:

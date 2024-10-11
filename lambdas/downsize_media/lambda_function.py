@@ -1,55 +1,28 @@
 import logging
-import psutil
-
 import boto3
-import cv2
 
-from cv2.typing import MatLike
-from multiprocessing import cpu_count
-from lambda_multiprocessing import Pool
 from typing import cast
 from PIL import Image
 
 from lambdas.font import Font
 from lambdas.custom_types import (
-    FrameData,
-    Frames,
     MediaFile,
     ImageFile,
-    VideoFile,
     ImageExtension,
-    VideoExtension,
 )
 from lambdas.utils import (
-    compress_and_save,
-    split_file_name,
     calculate_scale,
     download_from_s3,
     save_image,
+    find_media_type,
 )
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
-bucket_name: str = ""
-batch_size: int = 47
 
-
-def find_media_type(file_path: str) -> MediaFile:
-    file_name, file_extension = split_file_name(file_path)
-    if file_extension in ImageExtension._value2member_map_:
-        if ImageExtension(file_extension) is ImageExtension.JPG:
-            return ImageFile(file_name, ImageExtension.JPEG)
-        else:
-            return ImageFile(file_name, ImageExtension(file_extension))
-    if file_extension in VideoExtension._value2member_map_:
-        return VideoFile(file_name, VideoExtension(file_extension))
-
-    raise ValueError(f"Unsupported file extension: {file_extension}")
-
-
-def rescale_image(image: Image.Image, image_file: ImageFile) -> str:
+def rescale_image(image: Image.Image, image_file: ImageFile, bucket_name: str) -> str:
     width, height = image.size
     image_name: str = image_file.file_name
     image_extension: ImageExtension = image_file.extension
@@ -67,104 +40,18 @@ def rescale_image(image: Image.Image, image_file: ImageFile) -> str:
     )
 
 
-def resize_frame(frame_data: FrameData) -> tuple[Image.Image, str]:
-    frame_image: MatLike = cast(MatLike, frame_data.frame)
-    height, width, _ = frame_image.shape
-    scale = calculate_scale(height)
-    return (
-        Image.fromarray(
-            cv2.cvtColor(
-                cv2.resize(
-                    frame_image,
-                    (
-                        int(Font.Height.value / Font.Width.value * width / scale),
-                        int(height / scale),
-                    ),
-                ),
-                cv2.COLOR_BGR2RGB,
-            )
-        ),
-        f"{frame_data.frame_id:06d}",
-    )
-
-
-def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> list[str]:
-    frame_id: int = 1
-    last_frame_id: int = 1
-    video_name: str = video_file.file_name
-    continue_processing: bool = True
-
-    logger.info(cpu_count())
-
-    compressed_frames_path: list[str] = []
-
-    while continue_processing:
-        frames: Frames = []
-        for _ in range(batch_size):
-            ret, frame = video_capture.read()
-            if ret:
-                frames.append(
-                    FrameData(frame=frame, frame_id=frame_id, video_name=video_name)
-                )
-                frame_id += 1
-            else:
-                continue_processing = False
-                break
-        logger.info(f"Finished extract frames: {psutil.virtual_memory()[3]/1000000}")
-        pool = Pool(cpu_count())
-        resized_frames = pool.map(resize_frame, frames)
-
-        logger.info(f"Finished resize: {psutil.virtual_memory()[3]/1000000}")
-
-        compressed_frame_path = (
-            f"processed/{video_name}/{(last_frame_id):06d}-{frame_id-1:06d}.tar.gz"
-        )
-
-        compressed_frames_path.append(compressed_frame_path)
-        compress_and_save(
-            s3_client,
-            bucket_name,
-            resized_frames,
-            compressed_frame_path,
-        )
-        last_frame_id = frame_id
-        resized_frames.clear()
-
-        logger.info(f"Finished saving: {psutil.virtual_memory()[3]/1000000}")
-
-    return compressed_frames_path
-
-
 def lambda_handler(event: dict, _) -> dict:
-    global bucket_name
     logger.info(event)
     file_path: str = event["Records"][0]["s3"]["object"]["key"]
     bucket_name = event["Records"][0]["s3"]["bucket"]["name"]
 
     media_file: MediaFile = find_media_type(file_path)
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
-
-    is_video: bool = media_file.extension in VideoExtension
-    is_image: bool = media_file.extension in ImageExtension
-
-    response = {
+    image: Image.Image = Image.open(local_file).convert("RGB")
+    return {
         "key": file_path,
-        "is_video": is_video,
-        "is_image": is_image,
+        "is_video": False,
+        "is_image": True,
         "bucket_name": bucket_name,
+        "processed_key": rescale_image(image, cast(ImageFile, media_file), bucket_name),
     }
-
-    if is_video:
-        video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)
-        processed_key = extract_frames(video_capture, cast(VideoFile, media_file))
-        video_capture.release()
-        return {**response, "processed_key": processed_key}
-    if is_image:
-        image: Image.Image = Image.open(local_file).convert("RGB")
-        return {
-            **response,
-            "processed_key": rescale_image(image, cast(ImageFile, media_file)),
-        }
-
-    logger.info(response)
-    return response

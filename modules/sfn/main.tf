@@ -94,10 +94,10 @@ resource "aws_lambda_function" "downsize_video" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_video}:latest"
-  timeout       = 240
+  timeout       = 60
   memory_size   = 3008
   ephemeral_storage {
-    size = 2048
+    size = 4096
   }
 }
 
