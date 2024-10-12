@@ -117,7 +117,12 @@ def lambda_handler(event, _) -> dict:
             ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "slower"],
         )
         logger.info("Finish save local video")
-        key = save_video(s3_client, ASCII_ART_BUCKET, "/tmp/temp-video.mp4", file_path)
+        key = save_video(
+            s3_client,
+            ASCII_ART_BUCKET,
+            "/tmp/temp-video.mp4",
+            f"{media_file.file_name}/{media_file.file_name}_ascii.{media_file.extension.value}",
+        )
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")
         ascii_image = ascii_convert(image)
@@ -126,6 +131,6 @@ def lambda_handler(event, _) -> dict:
             ASCII_ART_BUCKET,
             ascii_image,
             ImageExtension(media_file.extension),
-            file_path,
+            f"{media_file.file_name}_ascii.{media_file.extension.value}",
         )
     return {"ascii_art_key": key}
