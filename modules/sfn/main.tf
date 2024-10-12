@@ -290,7 +290,7 @@ resource "aws_sfn_state_machine" "step_function" {
         "Type": "Pass",
         "Parameters": {
           "audio_key.$": "$[0].audio_key",
-          "videos_key.$": "$[1]"
+          "videos_key.$": "$[1].videos_key"
         },
         "Next": "MergeFrames"
       },

@@ -1,4 +1,4 @@
 pillow==10.3.0
-opencv-python==4.9.0.80
+opencv-contrib-python-headless==4.10.0.84
 numpy==1.26.4
 moviepy==1.0.3
