@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import cast
@@ -11,7 +12,11 @@ from cv2.typing import MatLike
 from moviepy.editor import ImageSequenceClip
 from PIL import Image
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
-from lambdas.process_frames.modules.utils import create_ascii_image
+from lambdas.process_frames.modules.utils import (
+    create_ascii_image,
+    create_char_array,
+    map_to_char_vectorized,
+)
 from lambdas.utils import (
     download_from_s3,
     find_media_type,
@@ -38,14 +43,6 @@ ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 
 
-def create_char_array(ascii_dict: str) -> np.ndarray:
-    return np.array(list(ascii_dict))
-
-
-def map_to_char_vectorized(values: np.ndarray, char_array: np.ndarray) -> np.ndarray:
-    return char_array[np.digitize(values, np.linspace(0, 256, len(char_array) + 1)) - 1]
-
-
 def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
     img_array = np.array(image)
     height, width, _ = img_array.shape
@@ -57,7 +54,7 @@ def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
         if width * height >= 180 * 180
         else AsciiDict.LowAsciiDict
     )
-    char_array = create_char_array(ascii_dict.value)
+    char_array = create_char_array(ascii_dict)
 
     ascii_chars = map_to_char_vectorized(gray_array, char_array)
 
@@ -144,4 +141,17 @@ def lambda_handler(event, _) -> dict:
             ImageExtension(media_file.extension),
             f"{media_file.file_name}_ascii.{media_file.extension.value}",
         )
+        url: str = s3_client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": ASCII_ART_BUCKET,
+                "Key": key,
+            },
+            ExpiresIn=300,
+        )
+        return {
+            "statusCode": 200,
+            "ascii_art_key": key,
+            "body": json.dumps(cast(dict[str, str], {"url": url})),
+        }
     return {"ascii_art_key": key}

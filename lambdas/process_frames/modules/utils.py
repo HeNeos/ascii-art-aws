@@ -1,14 +1,20 @@
+import numpy as np
+
 from typing import cast
 from PIL import Image, ImageDraw, ImageFont
 
 from lambdas.font import Font
+
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
 from lambdas.custom_types import AsciiImage, AsciiColors, Color
 
 
-def map_to_char(gray_scale: float, ascii_dict: AsciiDict) -> str:
-    position: int = int(((len(ascii_dict.value) - 1) * gray_scale) / 255)
-    return ascii_dict.value[position]
+def create_char_array(ascii_dict: AsciiDict) -> np.ndarray:
+    return np.array(list(ascii_dict.value))
+
+
+def map_to_char_vectorized(values: np.ndarray, char_array: np.ndarray) -> np.ndarray:
+    return char_array[np.digitize(values, np.linspace(0, 256, len(char_array) + 1)) - 1]
 
 
 def create_ascii_image(ascii_art: AsciiImage, image_colors: AsciiColors) -> Image.Image:

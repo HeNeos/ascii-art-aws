@@ -1,5 +1,7 @@
+import json
 import logging
 import os
+from typing import cast
 
 import boto3
 
@@ -58,4 +60,17 @@ def lambda_handler(event: dict, _) -> dict:
         f"{video_name}-{random_id}/{video_name}_ascii.{video_extension}",
     )
 
-    return {"bucket": ASCII_ART_BUCKET, "output": video_key}
+    url: str = s3_client.generate_presigned_url(
+        "get_object",
+        Params={
+            "Bucket": ASCII_ART_BUCKET,
+            "Key": video_key,
+        },
+        ExpiresIn=300,
+    )
+
+    return {
+        "statusCode": 200,
+        "ascii_art_key": video_key,
+        "body": json.dumps(cast(dict[str, str], {"url": url})),
+    }
