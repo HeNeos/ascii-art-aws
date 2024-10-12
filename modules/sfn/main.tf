@@ -171,7 +171,8 @@ resource "aws_lambda_function" "extract_audio" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_extract_audio}:latest"
-  timeout       = 60
+  timeout       = 40
+  memory_size   = 1024
 
   environment {
     variables = {
