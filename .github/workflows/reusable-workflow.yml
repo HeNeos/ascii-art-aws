@@ -445,3 +445,95 @@ jobs:
           -var="lambda_image_merge_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
           -var="lambda_image_process_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
           -auto-approve -input=false
+
+  lambda_update:
+    runs-on: ubuntu-latest
+    needs:
+      - deploy
+      - deploy_ecr
+      - build_and_push_docker
+    steps:
+      - name: Configure AWS credentials from AWS account
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHub-OIDC-Terraform
+
+      - name: Get base repo uri
+        id: get_base_repo_uri
+        uses: noobly314/share-data@v1
+        with:
+          share-id: base_repo_uri
+          mode: get
+          key: base_repo_uri
+
+      - name: Get image repo downsize media
+        id: get_image_repo_downsize_media
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_media
+          mode: get
+          key: image_repo_downsize_media
+
+      - name: Get image repo downsize video
+        id: get_image_repo_downsize_video
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_video
+          mode: get
+          key: image_repo_downsize_video
+
+      - name: Get image repo extract audio
+        id: get_image_repo_extract_audio
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_extract_audio
+          mode: get
+          key: image_repo_extract_audio
+
+      - name: Get image repo merge frames
+        id: get_image_repo_merge_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_merge_frames
+          mode: get
+          key: image_repo_merge_frames
+
+      - name: Get image repo process frames
+        id: get_image_repo_process_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_process_frames
+          mode: get
+          key: image_repo_process_frames
+
+      - name: ecr login
+        run: |
+          aws ecr get-login-password \
+            --region $AWS_DEFAULT_REGION |\
+            docker login \
+              --username AWS \
+              --password-stdin ${{steps.get_base_repo_uri.outputs.data}}
+
+      - name: Update lambda function
+        run: |
+          ecr_repo_base_uri=${{steps.get_base_repo_uri.outputs.data}}
+
+          declare -A function_images
+          function_images=(
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA }}"]="${{ steps.get_image_repo_downsize_media.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_DOWNSIZE_VIDEO }}"]="${{ steps.get_image_repo_downsize_video.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="${{ steps.get_image_repo_extract_audio.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="${{ steps.get_image_repo_merge_frames.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_FRAMES }}"]="${{ steps.get_image_repo_process_frames.outputs.data }}"
+          )
+
+          for function_name in "${!function_images[@]}"; do
+              repo_name="${function_images[$function_name]}"
+              (
+                aws lambda update-function-code \
+                  --function-name $function_name-${{inputs.stage}} \
+                  --image-uri $repo_name
+              ) &
+          done
