@@ -187,7 +187,7 @@ resource "aws_lambda_function" "merge_frames" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_merge_frames}:latest"
-  timeout       = 200
+  timeout       = 240
   memory_size   = 10240
 
   ephemeral_storage {
