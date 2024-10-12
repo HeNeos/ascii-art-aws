@@ -244,6 +244,7 @@ resource "aws_sfn_state_machine" "step_function" {
                 "ItemsPath": "$.processed_key",
                 "Parameters": {
                   "key.$": "$.key",
+                  "random_id.$": "$.random_id",
                   "bucket_name.$": "$.bucket_name",
                   "is_video.$": "$.is_video",
                   "is_image.$": "$.is_image",
@@ -291,6 +292,7 @@ resource "aws_sfn_state_machine" "step_function" {
         "Parameters": {
           "audio_key.$": "$[0].audio_key",
           "key.$": "$[0].key",
+          "random_id.$": "$[0].random_id",
           "videos_key.$": "$[1].videos_key"
         },
         "Next": "MergeFrames"

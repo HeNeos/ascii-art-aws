@@ -30,6 +30,7 @@ def lambda_handler(event: dict, _) -> dict:
     initial_key: str = event["key"]
     audio_key: str = event["audio_key"]
     splitted_videos_key: list[str] = event["videos_key"]
+    random_id: str = event["random_id"]
 
     audio_local_path: str = download_from_s3(s3_client, AUDIO_BUCKET, audio_key)
     audio_clip: AudioFileClip = AudioFileClip(audio_local_path)
@@ -54,7 +55,7 @@ def lambda_handler(event: dict, _) -> dict:
         s3_client,
         ASCII_ART_BUCKET,
         f"/tmp/video.{video_extension}",
-        f"{video_name}/{video_name}_ascii.{video_extension}",
+        f"{video_name}-{random_id}/{video_name}_ascii.{video_extension}",
     )
 
     return {"bucket": ASCII_ART_BUCKET, "output": video_key}

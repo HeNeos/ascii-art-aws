@@ -7,6 +7,7 @@ import boto3
 from lambda_multiprocessing import Pool
 from multiprocessing import cpu_count
 from typing import cast
+from uuid import uuid4
 from moviepy.editor import VideoFileClip
 
 from lambdas.font import Font
@@ -29,6 +30,7 @@ class SplitVideo:
     batch_id: int
     video_name: str
     video_extension: VideoExtension
+    random_id: str
 
 
 def save_split_video(video_metadata: SplitVideo) -> str:
@@ -37,18 +39,20 @@ def save_split_video(video_metadata: SplitVideo) -> str:
     splitted_video = video_resized.subclip(
         video_metadata.start_time, video_metadata.end_time
     ).without_audio()
-    folder_name = f"{video_metadata.video_name}/{video_metadata.video_name}"
-    key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
     splitted_video.write_videofile(
         video_metadata.local_path,
         temp_audiofile=f"/tmp/{video_metadata.batch_id:03d}-downsize.mp3",
     )
+    folder_name = f"{video_metadata.video_name}-{video_metadata.random_id}/{video_metadata.video_name}"
+    key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
     return save_video(
         s3_client, bucket_name, video_metadata.local_path, f"processed/{key}"
     )
 
 
-def split_video(video: VideoFileClip, media_file: VideoFile) -> list[str]:
+def split_video(
+    video: VideoFileClip, media_file: VideoFile, random_id: str
+) -> list[str]:
     batch_duration = 1 + int((video.duration**0.5) / 4)
 
     videos_metadata: list[SplitVideo] = []
@@ -66,6 +70,7 @@ def split_video(video: VideoFileClip, media_file: VideoFile) -> list[str]:
                 batch_id=batch_id,
                 video_name=media_file.file_name,
                 video_extension=media_file.extension,
+                random_id=random_id,
             )
         )
         if end_time is None:
@@ -85,8 +90,9 @@ def lambda_handler(event: dict, _) -> dict:
     global video_resized
     logger.info(event)
     file_path: str = event["key"]
+    random_id = uuid4().hex
 
-    media_file: VideoFile = cast(VideoFile, find_media_type(file_path))
+    video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
 
     video = VideoFileClip(local_file)
@@ -100,25 +106,26 @@ def lambda_handler(event: dict, _) -> dict:
         )
     )
 
-    video_folder_name = f"{media_file.file_name}/{media_file.file_name}"
+    video_folder_name = f"{video_file.file_name}-{random_id}/{video_file.file_name}"
     video_resized.write_videofile(
-        f"/tmp/{media_file.file_name}-downsize.{media_file.extension.value}",
-        temp_audiofile=f"/tmp/{media_file.file_name}-downsize.mp3",
+        f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
+        temp_audiofile=f"/tmp/{video_file.file_name}-downsize.mp3",
     )
 
-    save_video(
+    downsize_video_key = save_video(
         s3_client,
         bucket_name,
-        f"/tmp/{media_file.file_name}-downsize.{media_file.extension.value}",
-        f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
+        f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
+        f"processed/{video_folder_name}-downsize.{video_file.extension.value}",
     )
 
-    processed_key = split_video(video_resized, media_file)
+    processed_key = split_video(video_resized, video_file, random_id)
 
     return {
         "key": file_path,
         "is_video": True,
         "is_image": False,
-        "downsize_video": f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
+        "downsize_video": downsize_video_key,
         "processed_key": processed_key,
+        "random_id": random_id,
     }

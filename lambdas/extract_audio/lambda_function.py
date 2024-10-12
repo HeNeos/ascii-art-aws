@@ -21,6 +21,7 @@ MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 def lambda_handler(event: dict, _) -> dict:
     logger.info(event)
     file_path: str = event["downsize_video"]
+    random_id: str = event["random_id"]
 
     video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
@@ -29,7 +30,7 @@ def lambda_handler(event: dict, _) -> dict:
     audio_clip = video.audio
     audio_clip.write_audiofile("/tmp/audio.mp3")
 
-    processed_key = f"{video_file.file_name}/audio.mp3"
+    processed_key = f"{video_file.file_name}-{random_id}/audio.mp3"
 
     with open("/tmp/audio.mp3", "rb") as f:
         s3_client.upload_fileobj(f, AUDIO_BUCKET, processed_key)
@@ -38,4 +39,5 @@ def lambda_handler(event: dict, _) -> dict:
         "key": event["key"],
         "audio_bucket": AUDIO_BUCKET,
         "audio_key": processed_key,
+        "random_id": random_id,
     }

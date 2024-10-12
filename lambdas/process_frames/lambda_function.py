@@ -93,6 +93,7 @@ def lambda_handler(event, _) -> dict:
     video_name, _ = split_file_name(initial_key)
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
+    random_id: str = event["random_id"]
 
     media_file: MediaFile = find_media_type(file_path)
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
@@ -127,7 +128,7 @@ def lambda_handler(event, _) -> dict:
             s3_client,
             ASCII_ART_BUCKET,
             "/tmp/temp-video.mp4",
-            f"{video_name}/{media_file.file_name}_ascii.{media_file.extension.value}",
+            f"{video_name}-{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}",
         )
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")
@@ -137,6 +138,6 @@ def lambda_handler(event, _) -> dict:
             ASCII_ART_BUCKET,
             ascii_image,
             ImageExtension(media_file.extension),
-            f"{media_file.file_name}_ascii.{media_file.extension.value}",
+            f"{media_file.file_name}-{random_id}_ascii.{media_file.extension.value}",
         )
     return {"ascii_art_key": key}
