@@ -11,7 +11,7 @@ from cv2.typing import MatLike
 from moviepy.editor import ImageSequenceClip
 from PIL import Image
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
-from lambdas.process_frames.modules.utils import create_ascii_image, map_to_char
+from lambdas.process_frames.modules.utils import create_ascii_image
 from lambdas.utils import (
     download_from_s3,
     find_media_type,
@@ -142,6 +142,6 @@ def lambda_handler(event, _) -> dict:
             ASCII_ART_BUCKET,
             ascii_image,
             ImageExtension(media_file.extension),
-            f"{media_file.file_name}-{random_id}_ascii.{media_file.extension.value}",
+            f"{media_file.file_name}_ascii.{media_file.extension.value}",
         )
     return {"ascii_art_key": key}
