@@ -4,6 +4,14 @@
 
 ![architecture diagram](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/ascii_art.drawio.png)
 
+## Examples
+
+![jaden_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1.PNG)
+![jaden_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1_resized-f6e9b8db7b4e47859486596239636939_ascii.png)
+
+![simpsons_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons.mp4)
+![simpsons_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons_ascii.mp4)
+
 ## Description
 
 It mostly works for images, in less than 10 sec, be aware that image resolution is big and could be heavier.

@@ -125,7 +125,7 @@ resource "aws_s3_bucket_notification" "media_bucket_notification" {
 }
 
 resource "aws_cloudwatch_event_rule" "trigger_rule" {
-  name = "s3-object-created-rule"
+  name = "s3-object-created-rule-${var.stage}"
   event_pattern = jsonencode({
     "source" : ["aws.s3"],
     "detail-type" : ["Object Created"],
