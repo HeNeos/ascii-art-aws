@@ -32,17 +32,20 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       IMAGE_REPO_DOWNSIZE_MEDIA: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_DOWNSIZE_MEDIA}}
+      IMAGE_REPO_DOWNSIZE_VIDEO: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_DOWNSIZE_VIDEO}}
       IMAGE_REPO_EXTRACT_AUDIO: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_EXTRACT_AUDIO}}
       IMAGE_REPO_MERGE_FRAMES: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_MERGE_FRAMES}}
-      IMAGE_REPO_PROCCESS_FRAMES: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_PROCCESS_FRAMES}}
+      IMAGE_REPO_PROCESS_FRAMES: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_PROCESS_FRAMES}}
       FUNCTION_NAME_DOWNSIZE_MEDIA: ${{steps.parse-config.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA}}
+      FUNCTION_NAME_DOWNSIZE_VIDEO: ${{steps.parse-config.outputs.FUNCTION_NAME_DOWNSIZE_VIDEO}}
       FUNCTION_NAME_EXTRACT_AUDIO: ${{steps.parse-config.outputs.FUNCTION_NAME_EXTRACT_AUDIO}}
       FUNCTION_NAME_MERGE_FRAMES: ${{steps.parse-config.outputs.FUNCTION_NAME_MERGE_FRAMES}}
-      FUNCTION_NAME_PROCCESS_FRAMES: ${{steps.parse-config.outputs.FUNCTION_NAME_PROCCESS_FRAMES}}
+      FUNCTION_NAME_PROCESS_FRAMES: ${{steps.parse-config.outputs.FUNCTION_NAME_PROCESS_FRAMES}}
       LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA}}
+      LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO}}
       LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO}}
       LAMBDA_FUNCTION_NAME_MERGE_FRAMES: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES}}
-      LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES}}
+      LAMBDA_FUNCTION_NAME_PROCESS_FRAMES: ${{steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES}}
       BASE_REPO_URI: ${{steps.deploy-ecr.outputs.BASE_REPO_URI}}
     defaults:
       run:
@@ -72,19 +75,22 @@ jobs:
         id: parse-config
         run: |
           function_name_downsize_media=$(jq -r '.lambda.function_name_downsize_media' config.json)
+          function_name_downsize_video=$(jq -r '.lambda.function_name_downsize_video' config.json)
           function_name_extract_audio=$(jq -r '.lambda.function_name_extract_audio' config.json)
           function_name_merge_frames=$(jq -r '.lambda.function_name_merge_frames' config.json)
-          function_name_proccess_frames=$(jq -r '.lambda.function_name_proccess_frames' config.json)
+          function_name_process_frames=$(jq -r '.lambda.function_name_process_frames' config.json)
 
           echo "FUNCTION_NAME_DOWNSIZE_MEDIA=${function_name_downsize_media}" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME_DOWNSIZE_VIDEO=${function_name_downsize_video}" >> $GITHUB_OUTPUT
           echo "FUNCTION_NAME_EXTRACT_AUDIO=${function_name_extract_audio}" >> $GITHUB_OUTPUT
           echo "FUNCTION_NAME_MERGE_FRAMES=${function_name_merge_frames}" >> $GITHUB_OUTPUT
-          echo "FUNCTION_NAME_PROCCESS_FRAMES=${function_name_proccess_frames}" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME_PROCESS_FRAMES=${function_name_process_frames}" >> $GITHUB_OUTPUT
 
           echo "LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA=${function_name_downsize_media}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO=${function_name_downsize_video}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
           echo "LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO=${function_name_extract_audio}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
           echo "LAMBDA_FUNCTION_NAME_MERGE_FRAMES=${function_name_merge_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
-          echo "LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES=${function_name_proccess_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNCTION_NAME_PROCESS_FRAMES=${function_name_process_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
 
       - name: Deploy ECR
         id: deploy-ecr
@@ -100,18 +106,20 @@ jobs:
             -var="stage=${{inputs.stage}}" \
             -var="region=${{secrets.AWS_REGION}}" \
             -var="lambda_function_name_downsize_media=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+            -var="lambda_function_name_downsize_video=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
             -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
             -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-            -var="lambda_function_name_proccess_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+            -var="lambda_function_name_process_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
             -no-color
 
           terraform apply \
             -var="stage=${{inputs.stage}}" \
             -var="region=${{secrets.AWS_REGION}}" \
             -var="lambda_function_name_downsize_media=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+            -var="lambda_function_name_downsize_video=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
             -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
             -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-            -var="lambda_function_name_proccess_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+            -var="lambda_function_name_process_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
             -auto-approve -input=false
 
       - name: Get ECR Repository URIs
@@ -120,9 +128,10 @@ jobs:
           cd modules/ecr
 
           echo "IMAGE_REPO_DOWNSIZE_MEDIA=$(terraform output -raw ecr_repo_downsize_media_url):latest" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_DOWNSIZE_VIDEO=$(terraform output -raw ecr_repo_downsize_video_url):latest" >> $GITHUB_OUTPUT
           echo "IMAGE_REPO_EXTRACT_AUDIO=$(terraform output -raw ecr_repo_extract_audio_url):latest" >> $GITHUB_OUTPUT
           echo "IMAGE_REPO_MERGE_FRAMES=$(terraform output -raw ecr_repo_merge_frames_url):latest" >> $GITHUB_OUTPUT
-          echo "IMAGE_REPO_PROCCESS_FRAMES=$(terraform output -raw ecr_repo_proccess_frames_url):latest" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_PROCESS_FRAMES=$(terraform output -raw ecr_repo_process_frames_url):latest" >> $GITHUB_OUTPUT
 
       - name: Set base repo uri
         id: set_base_repo_uri
@@ -142,6 +151,15 @@ jobs:
           key: image_repo_downsize_media
           value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_DOWNSIZE_MEDIA}}
 
+      - name: Set image repo downsize video
+        id: set_image_repo_downsize_video
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_video
+          mode: set
+          key: image_repo_downsize_video
+          value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_DOWNSIZE_VIDEO}}
+
       - name: Set image repo extract_audio
         id: set_image_repo_extract_audio
         uses: noobly314/share-data@v1
@@ -160,14 +178,14 @@ jobs:
           key: image_repo_merge_frames
           value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_MERGE_FRAMES}}
 
-      - name: Set image repo proccess frames
-        id: set_image_repo_proccess_frames
+      - name: Set image repo process frames
+        id: set_image_repo_process_frames
         uses: noobly314/share-data@v1
         with:
-          share-id: image_repo_proccess_frames
+          share-id: image_repo_process_frames
           mode: set
-          key: image_repo_proccess_frames
-          value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_PROCCESS_FRAMES}}
+          key: image_repo_process_frames
+          value: ${{steps.get-ecr-repository.outputs.IMAGE_REPO_PROCESS_FRAMES}}
 
   build_and_push_docker:
     name: Build and push Docker Images
@@ -205,6 +223,14 @@ jobs:
           mode: get
           key: image_repo_downsize_media
 
+      - name: Get image repo downsize video
+        id: get_image_repo_downsize_video
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_video
+          mode: get
+          key: image_repo_downsize_video
+
       - name: Get image repo extract audio
         id: get_image_repo_extract_audio
         uses: noobly314/share-data@v1
@@ -221,13 +247,13 @@ jobs:
           mode: get
           key: image_repo_merge_frames
 
-      - name: Get image repo proccess frames
-        id: get_image_repo_proccess_frames
+      - name: Get image repo process frames
+        id: get_image_repo_process_frames
         uses: noobly314/share-data@v1
         with:
-          share-id: image_repo_proccess_frames
+          share-id: image_repo_process_frames
           mode: get
-          key: image_repo_proccess_frames
+          key: image_repo_process_frames
 
       - name: Build and Push Docker Images
         run: |
@@ -236,15 +262,16 @@ jobs:
           declare -A function_images
           function_images=(
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA }}"]="${{ steps.get_image_repo_downsize_media.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_DOWNSIZE_VIDEO }}"]="${{ steps.get_image_repo_downsize_video.outputs.data }}"
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="${{ steps.get_image_repo_extract_audio.outputs.data }}"
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="${{ steps.get_image_repo_merge_frames.outputs.data }}"
-              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCCESS_FRAMES }}"]="${{ steps.get_image_repo_proccess_frames.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_FRAMES }}"]="${{ steps.get_image_repo_process_frames.outputs.data }}"
           )
 
           cd lambdas
           for function_name in "${!function_images[@]}"; do
               repo_name="${function_images[$function_name]}"
-              if git diff --quiet HEAD^ HEAD -- $function_name/requirement.txt $function_name/*.py *.py; then
+              if git diff --quiet HEAD^ HEAD -- $function_name/requirement.txt $function_name/*.py $function_name/Dockerfile *.py; then
                 echo "No changes, skipping lambda"
               else
                 (
@@ -288,6 +315,14 @@ jobs:
           mode: get
           key: image_repo_downsize_media
 
+      - name: Get image repo downsize video
+        id: get_image_repo_downsize_video
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_video
+          mode: get
+          key: image_repo_downsize_video
+
       - name: Get image repo extract audio
         id: get_image_repo_extract_audio
         uses: noobly314/share-data@v1
@@ -304,13 +339,13 @@ jobs:
           mode: get
           key: image_repo_merge_frames
 
-      - name: Get image repo proccess frames
-        id: get_image_repo_proccess_frames
+      - name: Get image repo process frames
+        id: get_image_repo_process_frames
         uses: noobly314/share-data@v1
         with:
-          share-id: image_repo_proccess_frames
+          share-id: image_repo_process_frames
           mode: get
-          key: image_repo_proccess_frames
+          key: image_repo_process_frames
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -337,9 +372,10 @@ jobs:
           terraform plan \
           -var="stage=${{ inputs.stage }}" \
           -var="lambda_image_downsize_media=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+          -var="lambda_image_downsize_video=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
           -var="lambda_image_extract_audio=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
           -var="lambda_image_merge_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-          -var="lambda_image_proccess_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+          -var="lambda_image_process_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
           -no-color
         continue-on-error: true
 
@@ -391,9 +427,10 @@ jobs:
           terraform apply \
           -var="stage=${{ inputs.stage }}" \
           -var="lambda_image_downsize_media=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+          -var="lambda_image_downsize_video=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
           -var="lambda_image_extract_audio=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
           -var="lambda_image_merge_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-          -var="lambda_image_proccess_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+          -var="lambda_image_process_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
           -auto-approve -input=false
 
       - name: Terraform Apply on Prod
@@ -403,7 +440,100 @@ jobs:
           terraform apply \
           -var="stage=${{ inputs.stage }}" \
           -var="lambda_image_downsize_media=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
+          -var="lambda_image_downsize_video=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
           -var="lambda_image_extract_audio=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
           -var="lambda_image_merge_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-          -var="lambda_image_proccess_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCCESS_FRAMES }}" \
+          -var="lambda_image_process_frames=${{steps.get_base_repo_uri.outputs.data}}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
           -auto-approve -input=false
+
+  lambda_update:
+    runs-on: ubuntu-latest
+    needs:
+      - deploy
+      - deploy_ecr
+      - build_and_push_docker
+    steps:
+      - name: Configure AWS credentials from AWS account
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHub-OIDC-Terraform
+
+      - name: Get base repo uri
+        id: get_base_repo_uri
+        uses: noobly314/share-data@v1
+        with:
+          share-id: base_repo_uri
+          mode: get
+          key: base_repo_uri
+
+      - name: Get image repo downsize media
+        id: get_image_repo_downsize_media
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_media
+          mode: get
+          key: image_repo_downsize_media
+
+      - name: Get image repo downsize video
+        id: get_image_repo_downsize_video
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_downsize_video
+          mode: get
+          key: image_repo_downsize_video
+
+      - name: Get image repo extract audio
+        id: get_image_repo_extract_audio
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_extract_audio
+          mode: get
+          key: image_repo_extract_audio
+
+      - name: Get image repo merge frames
+        id: get_image_repo_merge_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_merge_frames
+          mode: get
+          key: image_repo_merge_frames
+
+      - name: Get image repo process frames
+        id: get_image_repo_process_frames
+        uses: noobly314/share-data@v1
+        with:
+          share-id: image_repo_process_frames
+          mode: get
+          key: image_repo_process_frames
+
+      - name: ecr login
+        run: |
+          aws ecr get-login-password \
+            --region $AWS_DEFAULT_REGION |\
+            docker login \
+              --username AWS \
+              --password-stdin ${{steps.get_base_repo_uri.outputs.data}}
+
+      - name: Update lambda function
+        run: |
+          ecr_repo_base_uri=${{steps.get_base_repo_uri.outputs.data}}
+
+          declare -A function_images
+          function_images=(
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA }}"]="${{ steps.get_image_repo_downsize_media.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_DOWNSIZE_VIDEO }}"]="${{ steps.get_image_repo_downsize_video.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="${{ steps.get_image_repo_extract_audio.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="${{ steps.get_image_repo_merge_frames.outputs.data }}"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_FRAMES }}"]="${{ steps.get_image_repo_process_frames.outputs.data }}"
+          )
+
+          for function_name in "${!function_images[@]}"; do
+              repo_name="${function_images[$function_name]}"
+              (
+                aws lambda update-function-code \
+                  --function-name $function_name-${{inputs.stage}} \
+                  --image-uri $repo_name
+              ) &
+          done

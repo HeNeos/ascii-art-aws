@@ -1,12 +1,9 @@
-# lambda/downsize_media/Dockerfile
 FROM public.ecr.aws/lambda/python:3.12
 
-# Copy requirements and function code
-COPY extract_audio/requirements.txt ./
-COPY extract_audio/lambda_function.py ./
-
-# Install dependencies
+COPY extract_audio/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Command to run the Lambda function
-CMD ["lambda_function.lambda_handler"]
+COPY *.py ./lambdas/
+COPY extract_audio/lambda_function.py ./lambdas/extract_audio/lambda_function.py
+
+CMD ["lambdas.extract_audio.lambda_function.lambda_handler"]

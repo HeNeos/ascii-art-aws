@@ -2,6 +2,10 @@ variable "lambda_function_name_downsize_media" {
   type = string
 }
 
+variable "lambda_function_name_downsize_video" {
+  type = string
+}
+
 variable "lambda_function_name_extract_audio" {
   type = string
 }
@@ -10,7 +14,7 @@ variable "lambda_function_name_merge_frames" {
   type = string
 }
 
-variable "lambda_function_name_proccess_frames" {
+variable "lambda_function_name_process_frames" {
   type = string
 }
 
