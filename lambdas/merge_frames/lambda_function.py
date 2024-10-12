@@ -46,13 +46,15 @@ def lambda_handler(event: dict, _) -> dict:
         [VideoFileClip(video_local_path) for video_local_path in videos_local_path]
     )
     video.audio = audio
-    video.write_videofile(f"/tmp/video.{video_extension}")
+    video.write_videofile(
+        f"/tmp/video.{video_extension}", temp_audiofile="/tmp/temporal-audio.mp3"
+    )
 
     video_key = save_video(
         s3_client,
         ASCII_ART_BUCKET,
         f"/tmp/video.{video_extension}",
-        f"{video_name}/{video_name}.{video_extension}",
+        f"{video_name}/{video_name}_ascii.{video_extension}",
     )
 
     return {"bucket": ASCII_ART_BUCKET, "output": video_key}

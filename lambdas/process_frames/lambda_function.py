@@ -17,6 +17,7 @@ from lambdas.utils import (
     find_media_type,
     save_image,
     save_video,
+    split_file_name,
 )
 from lambdas.custom_types import (
     AsciiImage,
@@ -88,6 +89,8 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> Fr
 def lambda_handler(event, _) -> dict:
     logger.info(event)
 
+    initial_key = event["key"]
+    video_name, _ = split_file_name(initial_key)
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
 
@@ -124,7 +127,7 @@ def lambda_handler(event, _) -> dict:
             s3_client,
             ASCII_ART_BUCKET,
             "/tmp/temp-video.mp4",
-            f"{media_file.file_name}/{media_file.file_name}_ascii.{media_file.extension.value}",
+            f"{video_name}/{media_file.file_name}_ascii.{media_file.extension.value}",
         )
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")
