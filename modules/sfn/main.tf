@@ -153,8 +153,8 @@ resource "aws_lambda_function" "downsize_video" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_video}:latest"
-  timeout       = 180
-  memory_size   = 8192
+  timeout       = 150
+  memory_size   = 10240
   ephemeral_storage {
     size = 4096
   }
@@ -187,8 +187,8 @@ resource "aws_lambda_function" "merge_frames" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_merge_frames}:latest"
-  timeout       = 180
-  memory_size   = 8192
+  timeout       = 200
+  memory_size   = 10240
 
   ephemeral_storage {
     size = 4096
@@ -209,7 +209,7 @@ resource "aws_lambda_function" "process_frames" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_process_frames}:latest"
   timeout       = 180
-  memory_size   = 8192
+  memory_size   = 10240
   ephemeral_storage {
     size = 4096
   }
