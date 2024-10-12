@@ -252,6 +252,11 @@ resource "aws_sfn_state_machine" "step_function" {
           },
           {
             "Variable": "$.fileExtension.extension",
+            "StringEquals": "MP4",
+            "Next": "SetVideoTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
             "StringEquals": "mov",
             "Next": "SetVideoTrue"
           },
@@ -267,12 +272,27 @@ resource "aws_sfn_state_machine" "step_function" {
           },
           {
             "Variable": "$.fileExtension.extension",
+            "StringEquals": "JPG",
+            "Next": "SetImageTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
             "StringEquals": "png",
             "Next": "SetImageTrue"
           },
           {
             "Variable": "$.fileExtension.extension",
+            "StringEquals": "PNG",
+            "Next": "SetImageTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
             "StringEquals": "jpeg",
+            "Next": "SetImageTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
+            "StringEquals": "JPEG",
             "Next": "SetImageTrue"
           }
         ],

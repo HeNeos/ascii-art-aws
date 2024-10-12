@@ -38,27 +38,31 @@ ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 
 
-def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
-    pix = image.load()
+def create_char_array(ascii_dict: str) -> np.ndarray:
+    return np.array(list(ascii_dict))
 
-    gray_image: Image.Image = image.convert("LA")
-    width, height = gray_image.size
+
+def map_to_char_vectorized(values: np.ndarray, char_array: np.ndarray) -> np.ndarray:
+    return char_array[np.digitize(values, np.linspace(0, 256, len(char_array) + 1)) - 1]
+
+
+def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
+    img_array = np.array(image)
+    height, width, _ = img_array.shape
+
+    gray_array = np.dot(img_array[..., :3], [0.2989, 0.5870, 0.1140])
 
     ascii_dict = (
         AsciiDict.HighAsciiDict
         if width * height >= 180 * 180
         else AsciiDict.LowAsciiDict
     )
+    char_array = create_char_array(ascii_dict.value)
 
-    grid: AsciiImage = [["X"] * width for _ in range(height)]
-    image_colors: AsciiColors = [[(255, 255, 255)] * width for _ in range(height)]
+    ascii_chars = map_to_char_vectorized(gray_array, char_array)
 
-    gray_pixels = gray_image.load()
-    for y in range(height):
-        for x in range(width):
-            current_char: str = map_to_char(gray_pixels[x, y][0], ascii_dict)
-            grid[y][x] = current_char
-            image_colors[y][x] = pix[x, y]
+    grid: AsciiImage = ascii_chars.tolist()
+    image_colors: AsciiColors = [row.tolist() for row in img_array]
 
     return grid, image_colors
 
