@@ -37,7 +37,7 @@ resource "aws_iam_policy" "media_bucket" {
       {
         Effect   = "Allow",
         Action   = ["s3:Get*", "s3:List*", "s3:Describe*"],
-        Resource = ["${var.media_bucket_arn}", "${var.media_bucket_arn}/*"]
+        Resource = ["${var.media_bucket_arn}", "${var.media_bucket_arn}/*", "${var.audio_bucket_arn}", "${var.audio_bucket_arn}/*", "${var.ascii_art_bucket_arn}", "${var.ascii_art_bucket_arn}/*"]
       },
       {
         Effect   = "Allow",
@@ -290,6 +290,7 @@ resource "aws_sfn_state_machine" "step_function" {
         "Type": "Pass",
         "Parameters": {
           "audio_key.$": "$[0].audio_key",
+          "key.$": "$[0].key",
           "videos_key.$": "$[1].videos_key"
         },
         "Next": "MergeFrames"

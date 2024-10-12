@@ -35,6 +35,7 @@ def lambda_handler(event: dict, _) -> dict:
         s3_client.upload_fileobj(f, AUDIO_BUCKET, processed_key)
 
     return {
+        "key": event["key"],
         "audio_bucket": AUDIO_BUCKET,
         "audio_key": processed_key,
     }

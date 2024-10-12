@@ -7,6 +7,7 @@ from moviepy.editor import (
     CompositeAudioClip,
     AudioFileClip,
     concatenate_videoclips,
+    VideoFileClip,
 )
 from lambdas.utils import (
     download_from_s3,
@@ -41,7 +42,9 @@ def lambda_handler(event: dict, _) -> dict:
 
     video_name, video_extension = split_file_name(initial_key)
 
-    video = concatenate_videoclips(videos_local_path)
+    video = concatenate_videoclips(
+        [VideoFileClip(video_local_path) for video_local_path in videos_local_path]
+    )
     video.audio = audio
     video.write_videofile(f"/tmp/video.{video_extension}")
 

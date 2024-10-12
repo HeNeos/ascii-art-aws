@@ -96,6 +96,7 @@ def lambda_handler(event, _) -> dict:
 
     if is_video:
         video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)
+        video_fps = video_capture.get(cv2.CAP_PROP_FPS)
         frames: Frames = extract_frames(video_capture, cast(VideoFile, media_file))
         video_capture.release()
         ascii_frames: list[Image.Image] = []
@@ -108,7 +109,9 @@ def lambda_handler(event, _) -> dict:
             )
             ascii_frames.append(ascii_image)
         logger.info("Finish ascii-ed frames")
-        video = ImageSequenceClip([np.array(frame) for frame in ascii_frames], fps=24)
+        video = ImageSequenceClip(
+            [np.array(frame) for frame in ascii_frames], fps=video_fps
+        )
         video.write_videofile(
             "/tmp/temp-video.mp4",
             temp_audiofile="/tmp/null-audio.mp3",
