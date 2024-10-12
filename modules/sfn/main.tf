@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "step_function_policy_assume_role" {
     effect = "Allow"
 
     principals {
-      identifiers = ["states.amazonaws.com"]
+      identifiers = ["states.amazonaws.com", "events.amazonaws.com"]
       type        = "Service"
     }
     actions = ["sts:AssumeRole"]
@@ -65,6 +65,22 @@ resource "aws_iam_role" "step_function_role" {
   assume_role_policy = data.aws_iam_policy_document.step_function_policy_assume_role.json
 }
 
+resource "aws_iam_role_policy" "step_function_policy" {
+  role   = aws_iam_role.step_function_role.id
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "states:StartExecution",
+      "Effect": "Allow",
+      "Resource": "${aws_sfn_state_machine.step_function.arn}"
+    }
+  ]
+}
+EOF
+}
+
 resource "aws_iam_policy_attachment" "step_function_lambda_attachment" {
   name       = "step-function-lambda-policy-${var.stage}"
   roles      = [aws_iam_role.step_function_role.name]
@@ -95,6 +111,43 @@ resource "aws_lambda_function" "downsize_media" {
   }
 }
 
+resource "aws_lambda_permission" "allow_bucket" {
+  statement_id  = "AllowExecutionFromS3Bucket"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.downsize_media.arn
+  principal     = "s3.amazonaws.com"
+  source_arn    = var.media_bucket_arn
+}
+
+resource "aws_s3_bucket_notification" "media_bucket_notification" {
+  bucket      = var.media_bucket_name
+  eventbridge = true
+}
+
+resource "aws_cloudwatch_event_rule" "trigger_rule" {
+  name = "s3-object-created-rule"
+  event_pattern = jsonencode({
+    "source" : ["aws.s3"],
+    "detail-type" : ["Object Created"],
+    "detail" = {
+      "bucket" = {
+        "name" = [var.media_bucket_name]
+      },
+      "object" = {
+        "key" = [{
+          "prefix" = "raw/"
+        }]
+      }
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "trigger_target" {
+  rule     = aws_cloudwatch_event_rule.trigger_rule.name
+  arn      = aws_sfn_state_machine.step_function.arn
+  role_arn = aws_iam_role.step_function_role.arn
+}
+
 resource "aws_lambda_function" "downsize_video" {
   function_name = var.lambda_function_name_downsize_video
   role          = aws_iam_role.lambda_role.arn
@@ -111,27 +164,6 @@ resource "aws_lambda_function" "downsize_video" {
       MEDIA_BUCKET = var.media_bucket_name
     }
   }
-}
-
-resource "aws_lambda_permission" "allow_bucket" {
-  statement_id  = "AllowExecutionFromS3Bucket"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.downsize_media.arn
-  principal     = "s3.amazonaws.com"
-  source_arn    = var.media_bucket_arn
-}
-
-resource "aws_s3_bucket_notification" "media_bucket_notification" {
-  bucket = var.media_bucket_name
-
-  lambda_function {
-    lambda_function_arn = aws_lambda_function.downsize_media.arn
-    events              = ["s3:ObjectCreated:*"]
-
-    filter_prefix = "raw/"
-  }
-
-  depends_on = [aws_lambda_permission.allow_bucket]
 }
 
 resource "aws_lambda_function" "extract_audio" {
@@ -196,8 +228,96 @@ resource "aws_sfn_state_machine" "step_function" {
   definition = <<-DEFINITION
   {
     "Comment": "AsciiArt State Machine",
-    "StartAt": "IsVideo",
+    "StartAt": "ExtractFileExtension",
     "States": {
+      "ExtractFileExtension": {
+        "Type": "Pass",
+        "ResultPath": "$.fileExtension",
+        "Parameters": {
+          "key.$": "$.detail.object.key",
+          "bucket_name.$": "$.detail.bucket.name",
+          "extension.$": "States.ArrayGetItem(States.StringSplit($.detail.object.key, '.'), 1)"
+        },
+        "Next": "CheckExtension"
+      },
+      "CheckExtension": {
+        "Type": "Choice",
+        "OutputPath": "$.fileExtension",
+        "Choices": [
+          {
+            "Variable": "$.fileExtension.extension",
+            "StringEquals": "mp4",
+            "Next": "SetVideoTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
+            "StringEquals": "mov",
+            "Next": "SetVideoTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
+            "StringEquals": "avi",
+            "Next": "SetVideoTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
+            "StringEquals": "jpg",
+            "Next": "SetImageTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
+            "StringEquals": "png",
+            "Next": "SetImageTrue"
+          },
+          {
+            "Variable": "$.fileExtension.extension",
+            "StringEquals": "jpeg",
+            "Next": "SetImageTrue"
+          }
+        ],
+        "Default": "NotSupported"
+      },
+      "SetVideoTrue": {
+        "Type": "Pass",
+        "ResultPath": "$.is_video",
+        "Result": true,
+        "Next": "SetImageFalse"
+      },
+      "SetImageFalse": {
+        "Type": "Pass",
+        "ResultPath": "$.is_image",
+        "Result": false,
+        "Next": "SetOutput"
+      },
+      "SetImageTrue": {
+        "Type": "Pass",
+        "ResultPath": "$.is_image",
+        "Result": true,
+        "Next": "SetVideoFalse"
+      },
+      "SetVideoFalse": {
+        "Type": "Pass",
+        "ResultPath": "$.is_video",
+        "Result": false,
+        "Next": "SetOutput"
+      },
+      "SetOutput": {
+        "Type": "Pass",
+        "ResultPath": "$.output",
+        "Parameters": {
+          "bucket_name.$": "$.bucket_name",
+          "key.$": "$.key",
+          "is_video.$": "$.is_video",
+          "is_image.$": "$.is_image"
+        },
+        "OutputPath": "$.output",
+        "Next": "IsVideo"
+      },
+      "NotSupported": {
+        "Type": "Fail",
+        "Error": "UnsupportedFormatError",
+        "Cause": "The uploaded file format is not supported."
+      },
       "IsVideo": {
         "Type": "Choice",
         "Choices": [
@@ -211,7 +331,8 @@ resource "aws_sfn_state_machine" "step_function" {
             "BooleanEquals": true,
             "Next": "DownsizeMedia"
           }
-        ]
+        ],
+        "Default": "NotSupported"
       },
       "DownsizeMedia": {
         "Type": "Task",
