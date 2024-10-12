@@ -236,7 +236,7 @@ resource "aws_sfn_state_machine" "step_function" {
         "Parameters": {
           "key.$": "$.detail.object.key",
           "bucket_name.$": "$.detail.bucket.name",
-          "extension.$": "States.ArrayGetItem(States.StringSplit($.detail.object.key, '.'), 1)"
+          "extension.$": "States.ArrayGetItem(States.StringSplit($.detail.object.key, '.'), States.MathAdd(States.ArrayLength(States.StringSplit($.detail.object.key, '.')), -1))"
         },
         "Next": "CheckExtension"
       },
@@ -366,7 +366,6 @@ resource "aws_sfn_state_machine" "step_function" {
                 "Parameters": {
                   "key.$": "$.key",
                   "random_id.$": "$.random_id",
-                  "bucket_name.$": "$.bucket_name",
                   "is_video.$": "$.is_video",
                   "is_image.$": "$.is_image",
                   "processed_key.$": "$$.Map.Item.Value"
