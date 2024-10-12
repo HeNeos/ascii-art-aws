@@ -34,6 +34,7 @@ logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
 ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
+MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 
 
 def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
@@ -87,12 +88,11 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> Fr
 def lambda_handler(event, _) -> dict:
     logger.info(event)
 
-    bucket_name: str = event["bucket_name"]
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
 
     media_file: MediaFile = find_media_type(file_path)
-    local_file: str = download_from_s3(s3_client, bucket_name, file_path)
+    local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
 
     if is_video:
         video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)

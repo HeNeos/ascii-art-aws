@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import logging
+import os
 
 import boto3
 
@@ -16,7 +17,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
-bucket_name: str = ""
+bucket_name: str = os.environ["MEDIA_BUCKET"]
 video_resized: VideoFileClip | None = None
 
 
@@ -81,11 +82,9 @@ def split_video(video: VideoFileClip, media_file: VideoFile) -> list[str]:
 
 
 def lambda_handler(event: dict, _) -> dict:
-    global bucket_name
     global video_resized
     logger.info(event)
     file_path: str = event["key"]
-    bucket_name = event["bucket_name"]
 
     media_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
@@ -120,7 +119,6 @@ def lambda_handler(event: dict, _) -> dict:
         "key": file_path,
         "is_video": True,
         "is_image": False,
-        "bucket_name": bucket_name,
         "downsize_video": f"processed/{video_folder_name}-downsize.{media_file.extension.value}",
         "processed_key": processed_key,
     }

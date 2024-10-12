@@ -87,6 +87,12 @@ resource "aws_lambda_function" "downsize_media" {
   ephemeral_storage {
     size = 1024
   }
+
+  environment {
+    variables = {
+      MEDIA_BUCKET = var.media_bucket_name
+    }
+  }
 }
 
 resource "aws_lambda_function" "downsize_video" {
@@ -98,6 +104,12 @@ resource "aws_lambda_function" "downsize_video" {
   memory_size   = 3008
   ephemeral_storage {
     size = 4096
+  }
+
+  environment {
+    variables = {
+      MEDIA_BUCKET = var.media_bucket_name
+    }
   }
 }
 
@@ -128,6 +140,13 @@ resource "aws_lambda_function" "extract_audio" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_extract_audio}:latest"
   timeout       = 60
+
+  environment {
+    variables = {
+      AUDIO_BUCKET = var.audio_bucket_name
+      MEDIA_BUCKET = var.media_bucket_name
+    }
+  }
 }
 
 resource "aws_lambda_function" "merge_frames" {
@@ -135,7 +154,20 @@ resource "aws_lambda_function" "merge_frames" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_merge_frames}:latest"
-  timeout       = 60
+  timeout       = 180
+  memory_size   = 3008
+
+  ephemeral_storage {
+    size = 4096
+  }
+
+  environment {
+    variables = {
+      ASCII_ART_BUCKET = var.ascii_art_bucket_name
+      MEDIA_BUCKET     = var.media_bucket_name
+      AUDIO_BUCKET     = var.audio_bucket_name
+    }
+  }
 }
 
 resource "aws_lambda_function" "process_frames" {
@@ -151,6 +183,7 @@ resource "aws_lambda_function" "process_frames" {
   environment {
     variables = {
       ASCII_ART_BUCKET = var.ascii_art_bucket_name
+      MEDIA_BUCKET     = var.media_bucket_name
     }
   }
 }
@@ -230,21 +263,36 @@ resource "aws_sfn_state_machine" "step_function" {
                         "Payload.$": "$",
                         "FunctionName": "${aws_lambda_function.process_frames.arn}"
                       },
+                      "ResultSelector": {
+                        "processed_frame.$": "$.Payload.ascii_art_key" 
+                      },
+                      "ResultPath": "$.processed_frame_result",
                       "End": true
                     }
                   }
+                },
+                "ResultSelector": {
+                  "videos_key.$": "$[*].processed_frame_result.processed_frame"
                 },
                 "End": true
               }
             }
           }
         ],
-        "Next": "MergeFrames"
+        "Next": "CombineOutputs"
       },
       "ProcessImage": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.process_frames.arn}",
         "End": true
+      },
+      "CombineOutputs": {
+        "Type": "Pass",
+        "Parameters": {
+          "audio_key.$": "$[0].audio_key",
+          "videos_key.$": "$[1]"
+        },
+        "Next": "MergeFrames"
       },
       "MergeFrames": {
         "Type": "Task",
