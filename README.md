@@ -6,11 +6,14 @@
 
 ## Examples
 
-![jaden_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1.PNG)
-![jaden_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1_resized-f6e9b8db7b4e47859486596239636939_ascii.png)
+|Original|Ascii|
+|--------|-----|
+|![jaden_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1.PNG)|![jaden_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1_resized-f6e9b8db7b4e47859486596239636939_ascii.png)|
 
-![simpsons_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons.mp4)
-![simpsons_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons_ascii.mp4)
+
+|Original|Ascii|
+|--------|-----|
+|<video src="https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons.mp4">| <video src="https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons_ascii.mp4"> |
 
 ## Description
 
