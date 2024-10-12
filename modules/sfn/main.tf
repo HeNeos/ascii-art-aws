@@ -13,7 +13,6 @@ data "aws_iam_policy_document" "lambda_policy_assume_role" {
 
 data "aws_iam_policy_document" "step_function_policy_assume_role" {
   statement {
-    sid    = ""
     effect = "Allow"
 
     principals {
@@ -112,7 +111,7 @@ resource "aws_lambda_function" "downsize_media" {
 }
 
 resource "aws_lambda_permission" "allow_bucket" {
-  statement_id  = "AllowExecutionFromS3Bucket"
+  statement_id  = "AllowExecutionFromS3Bucket-${var.stage}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.downsize_media.arn
   principal     = "s3.amazonaws.com"
