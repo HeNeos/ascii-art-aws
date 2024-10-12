@@ -13,7 +13,7 @@
 
 |Original|Ascii|
 |--------|-----|
-|<video src="https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons.mp4">| <video src="https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/simpsons_ascii.mp4"> |
+|<video src="https://github.com/user-attachments/assets/e923b3fa-91c2-4db0-8383-d81248b31a35">| <video src="./assets/simpsons_ascii.mp4"> |
 
 ## Description
 
