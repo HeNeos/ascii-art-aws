@@ -21,9 +21,11 @@ MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
 
+random_id: str = ""
+
 
 def merge_videos(video_files: list[str], output_path: str) -> None:
-    concat_file = "/tmp/concat_list.txt"
+    concat_file = "/tmp/concat_list-{random_id}.txt"
     with open(concat_file, "w") as f:
         for video_file in video_files:
             f.write(f"file '{video_file}'\n")
@@ -63,6 +65,8 @@ def add_audio_to_video(video_path: str, audio_path: str, output_path: str) -> No
 
 
 def lambda_handler(event: dict, _) -> dict:
+    global random_id
+
     logger.info(event)
     initial_key: str = event["key"]
     audio_key: str = event["audio_key"]
@@ -77,7 +81,7 @@ def lambda_handler(event: dict, _) -> dict:
 
     video_name, video_extension = split_file_name(initial_key)
 
-    merged_video_path = f"/tmp/video_merged.{video_extension}"
+    merged_video_path = f"/tmp/video_merged-{random_id}.{video_extension}"
     merge_videos(videos_local_path, merged_video_path)
 
     if has_audio:
