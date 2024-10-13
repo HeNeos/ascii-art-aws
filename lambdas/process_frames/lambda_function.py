@@ -11,6 +11,7 @@ import boto3
 from cv2.typing import MatLike
 from moviepy.editor import ImageSequenceClip
 from PIL import Image
+from lambdas.font import Font
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
 from lambdas.process_frames.modules.utils import (
     create_ascii_image,
@@ -114,6 +115,7 @@ def lambda_handler(event, _) -> dict:
             )
             ascii_frames.append(ascii_image)
         logger.info("Finish ascii-ed frames")
+        logger.info(f"Font info: {Font}")
         video = ImageSequenceClip(
             [np.array(frame) for frame in ascii_frames], fps=video_fps
         )
