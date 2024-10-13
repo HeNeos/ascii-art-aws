@@ -25,12 +25,17 @@ downsize_video_path: str | None = None
 @dataclass
 class SplitVideo:
     start_time: str
-    end_time: str | None
+    duration: str | None
     local_path: str
     batch_id: int
     video_name: str
     video_extension: VideoExtension
     random_id: str
+
+
+def convert_time(t: int) -> str:
+    minutes = t // 60
+    return f"00:{minutes:02d}:{(t%60):02d}"
 
 
 def run_ffmpeg(command: list):
@@ -46,16 +51,19 @@ def save_split_video(video_metadata: SplitVideo) -> str:
         return ""
     ffmpeg_command = [
         "ffmpeg",
-        "i",
-        downsize_video_path,
-        "ss",
+        "-ss",
         video_metadata.start_time,
+        "-i",
+        downsize_video_path,
     ]
 
-    if video_metadata.end_time:
-        ffmpeg_command += ["-to", video_metadata.end_time]
+    if video_metadata.duration:
+        ffmpeg_command += ["-t", video_metadata.duration]
 
-    ffmpeg_command += ["-c", "copy", video_metadata.local_path]
+    # It's re-encoding again to avoid miss key-frames
+    ffmpeg_command += ["-async", "1", video_metadata.local_path]
+
+    run_ffmpeg(ffmpeg_command)
 
     folder_name = f"{video_metadata.video_name}-{video_metadata.random_id}/{video_metadata.video_name}"
     key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
@@ -88,8 +96,8 @@ def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[
             end_time = -1
         videos_metadata.append(
             SplitVideo(
-                start_time=str(start_time),
-                end_time=str(end_time) if end_time > 0 else None,
+                start_time=convert_time(start_time),
+                duration=convert_time(batch_duration) if end_time > 0 else None,
                 local_path=f"/tmp/{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}",
                 batch_id=batch_id,
                 video_name=media_file.file_name,
@@ -97,7 +105,7 @@ def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[
                 random_id=random_id,
             )
         )
-        if end_time is None:
+        if end_time == -1:
             break
         start_time = end_time
         end_time += batch_duration
