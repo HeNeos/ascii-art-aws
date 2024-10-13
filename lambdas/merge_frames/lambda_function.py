@@ -1,16 +1,11 @@
 import json
 import logging
 import os
-from typing import cast
+import subprocess
 
 import boto3
 
-from moviepy.editor import (
-    CompositeAudioClip,
-    AudioFileClip,
-    concatenate_videoclips,
-    VideoFileClip,
-)
+from typing import cast
 from lambdas.utils import (
     download_from_s3,
     save_video,
@@ -25,6 +20,46 @@ s3_client = boto3.client("s3")
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
+
+
+def merge_videos(video_files: list[str], output_path: str) -> None:
+    concat_file = "/tmp/concat_list.txt"
+    with open(concat_file, "w") as f:
+        for video_file in video_files:
+            f.write(f"file '{video_file}'\n")
+
+    command = [
+        "ffmpeg",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        concat_file,
+        "-c",
+        "copy",
+        output_path,
+    ]
+
+    subprocess.run(command, check=True)
+
+
+def add_audio_to_video(video_path: str, audio_path: str, output_path: str) -> None:
+    command = [
+        "ffmpeg",
+        "-i",
+        video_path,
+        "-i",
+        audio_path,
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-shortest",
+        output_path,
+    ]
+
+    subprocess.run(command, check=True)
 
 
 def lambda_handler(event: dict, _) -> dict:
@@ -42,24 +77,20 @@ def lambda_handler(event: dict, _) -> dict:
 
     video_name, video_extension = split_file_name(initial_key)
 
-    video = concatenate_videoclips(
-        [VideoFileClip(video_local_path) for video_local_path in videos_local_path]
-    )
+    merged_video_path = f"/tmp/video_merged.{video_extension}"
+    merge_videos(videos_local_path, merged_video_path)
 
     if has_audio:
         audio_local_path: str = download_from_s3(s3_client, AUDIO_BUCKET, audio_key)
-        audio_clip: AudioFileClip = AudioFileClip(audio_local_path)
-        audio: list[AudioFileClip] = CompositeAudioClip([audio_clip])
-        video.audio = audio
-
-    video.write_videofile(
-        f"/tmp/video.{video_extension}", temp_audiofile="/tmp/temporal-audio.mp3"
-    )
+        final_video_path = f"/tmp/video_with_audio.{video_extension}"
+        add_audio_to_video(merged_video_path, audio_local_path, final_video_path)
+    else:
+        final_video_path = merged_video_path
 
     video_key = save_video(
         s3_client,
         ASCII_ART_BUCKET,
-        f"/tmp/video.{video_extension}",
+        final_video_path,
         f"{video_name}-{random_id}/{video_name}_ascii.{video_extension}",
     )
 
