@@ -24,7 +24,7 @@ def create_ascii_image(ascii_art: AsciiImage, image_colors: AsciiColors) -> Imag
         "black",
     )
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("consolas.ttf", 13)
+    font = ImageFont.truetype("consolas.ttf", 12)
     x, y = 0, 0
     for row in range(len(ascii_art)):
         for column in range(len(ascii_art[row])):
