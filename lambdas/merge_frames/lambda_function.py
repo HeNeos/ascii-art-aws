@@ -38,6 +38,8 @@ def merge_videos(video_files: list[str], output_path: str) -> None:
         "0",
         "-i",
         concat_file,
+        "-b:v",
+        "2M",
         "-c",
         "copy",
         output_path,
