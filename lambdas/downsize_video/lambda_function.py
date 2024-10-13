@@ -97,7 +97,7 @@ def lambda_handler(event: dict, _) -> dict:
 
     video = VideoFileClip(local_file)
     video_width, video_height = video.size
-    new_height: int = 90
+    new_height: int = 60
     scale_factor: float = new_height / video_height
     new_width = int(Font.Height.value / Font.Width.value * scale_factor * video_width)
     if new_width % 2 == 1:
@@ -114,6 +114,7 @@ def lambda_handler(event: dict, _) -> dict:
     video_resized.write_videofile(
         f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
         temp_audiofile=f"/tmp/{video_file.file_name}-downsize.mp3",
+        ffmpeg_params=["-preset", "veryfast"],
     )
 
     downsize_video_key = save_video(
