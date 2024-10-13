@@ -53,7 +53,7 @@ def save_split_video(video_metadata: SplitVideo) -> str:
 def split_video(
     video: VideoFileClip, media_file: VideoFile, random_id: str
 ) -> list[str]:
-    batch_duration = 1 + int((video.duration**0.5) / 5)
+    batch_duration: int = max(1, int((video.duration**0.5) / 5))
 
     videos_metadata: list[SplitVideo] = []
     start_time: int = 0
