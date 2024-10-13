@@ -97,7 +97,7 @@ def lambda_handler(event: dict, _) -> dict:
 
     video = VideoFileClip(local_file)
     video_width, video_height = video.size
-    new_height: int = 60
+    new_height: int = 72
     scale_factor: float = new_height / video_height
     new_width = int(Font.Height.value / Font.Width.value * scale_factor * video_width)
     if new_width % 2 == 1:
