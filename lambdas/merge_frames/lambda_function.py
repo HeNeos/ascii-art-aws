@@ -86,7 +86,7 @@ def lambda_handler(event: dict, _) -> dict:
 
     if has_audio:
         audio_local_path: str = download_from_s3(s3_client, AUDIO_BUCKET, audio_key)
-        final_video_path = f"/tmp/video_with_audio.{video_extension}"
+        final_video_path = f"/tmp/video_with_audio-{random_id}.{video_extension}"
         add_audio_to_video(merged_video_path, audio_local_path, final_video_path)
     else:
         final_video_path = merged_video_path
