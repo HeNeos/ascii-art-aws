@@ -33,10 +33,7 @@ def lambda_handler(event: dict, _) -> dict:
     audio_key: str = event["audio_key"]
     splitted_videos_key: list[str] = event["videos_key"]
     random_id: str = event["random_id"]
-
-    audio_local_path: str = download_from_s3(s3_client, AUDIO_BUCKET, audio_key)
-    audio_clip: AudioFileClip = AudioFileClip(audio_local_path)
-    audio: list[AudioFileClip] = CompositeAudioClip([audio_clip])
+    has_audio: bool = len(audio_key) > 0
 
     videos_local_path: list[str] = [
         download_from_s3(s3_client, ASCII_ART_BUCKET, video_key)
@@ -48,7 +45,13 @@ def lambda_handler(event: dict, _) -> dict:
     video = concatenate_videoclips(
         [VideoFileClip(video_local_path) for video_local_path in videos_local_path]
     )
-    video.audio = audio
+
+    if has_audio:
+        audio_local_path: str = download_from_s3(s3_client, AUDIO_BUCKET, audio_key)
+        audio_clip: AudioFileClip = AudioFileClip(audio_local_path)
+        audio: list[AudioFileClip] = CompositeAudioClip([audio_clip])
+        video.audio = audio
+
     video.write_videofile(
         f"/tmp/video.{video_extension}", temp_audiofile="/tmp/temporal-audio.mp3"
     )
