@@ -39,11 +39,12 @@ def merge_videos(video_files: list[str], output_path: str) -> None:
         "-i",
         concat_file,
         "-b:v",
-        "2M",
+        "1M",
         "-c",
         "copy",
         output_path,
     ]
+    logger.info(f"Merging with: {command}")
 
     subprocess.run(command, check=True)
 

@@ -11,7 +11,6 @@ import boto3
 from cv2.typing import MatLike
 from moviepy.editor import ImageSequenceClip
 from PIL import Image
-from lambdas.font import Font
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
 from lambdas.process_frames.modules.utils import (
     create_ascii_image,
@@ -122,7 +121,7 @@ def lambda_handler(event, _) -> dict:
             "/tmp/temp-video.mp4",
             temp_audiofile="/tmp/null-audio.mp3",
             codec="libx264",
-            ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "slower"],
+            ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "veryslow"],
         )
         logger.info("Finish save local video")
         key = save_video(
