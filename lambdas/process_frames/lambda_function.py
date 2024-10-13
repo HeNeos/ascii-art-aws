@@ -115,7 +115,6 @@ def lambda_handler(event, _) -> dict:
             )
             ascii_frames.append(ascii_image)
         logger.info("Finish ascii-ed frames")
-        logger.info(f"Font info: {Font}")
         video = ImageSequenceClip(
             [np.array(frame) for frame in ascii_frames], fps=video_fps
         )
@@ -123,7 +122,7 @@ def lambda_handler(event, _) -> dict:
             "/tmp/temp-video.mp4",
             temp_audiofile="/tmp/null-audio.mp3",
             codec="libx264",
-            ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "slow"],
+            ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "slower"],
         )
         logger.info("Finish save local video")
         key = save_video(
