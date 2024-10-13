@@ -25,7 +25,7 @@ random_id: str = ""
 
 
 def merge_videos(video_files: list[str], output_path: str) -> None:
-    concat_file = "/tmp/concat_list-{random_id}.txt"
+    concat_file = f"/tmp/concat_list-{random_id}.txt"
     with open(concat_file, "w") as f:
         for video_file in video_files:
             f.write(f"file '{video_file}'\n")
@@ -71,7 +71,7 @@ def lambda_handler(event: dict, _) -> dict:
     initial_key: str = event["key"]
     audio_key: str = event["audio_key"]
     splitted_videos_key: list[str] = event["videos_key"]
-    random_id: str = event["random_id"]
+    random_id = event["random_id"]
     has_audio: bool = len(audio_key) > 0
 
     videos_local_path: list[str] = [

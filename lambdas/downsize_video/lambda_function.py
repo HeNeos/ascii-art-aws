@@ -92,6 +92,8 @@ def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[
     end_time: int = start_time + batch_duration
     batch_id: int = 1
     while True:
+        if video_duration - end_time < min(0.5, batch_duration):
+            end_time = -1
         if end_time >= video_duration:
             end_time = -1
         videos_metadata.append(
