@@ -13,7 +13,6 @@ data "aws_iam_policy_document" "lambda_policy_assume_role" {
 
 data "aws_iam_policy_document" "step_function_policy_assume_role" {
   statement {
-    sid    = ""
     effect = "Allow"
 
     principals {
@@ -66,6 +65,7 @@ resource "aws_iam_role" "step_function_role" {
 }
 
 resource "aws_iam_role_policy" "step_function_policy" {
+  name   = "step-function-role-policy-${var.stage}"
   role   = aws_iam_role.step_function_role.id
   policy = <<EOF
 {
@@ -112,7 +112,7 @@ resource "aws_lambda_function" "downsize_media" {
 }
 
 resource "aws_lambda_permission" "allow_bucket" {
-  statement_id  = "AllowExecutionFromS3Bucket"
+  statement_id  = "AllowExecutionFromS3Bucket-${var.stage}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.downsize_media.arn
   principal     = "s3.amazonaws.com"
@@ -153,7 +153,7 @@ resource "aws_lambda_function" "downsize_video" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_video}:latest"
-  timeout       = 150
+  timeout       = 90
   memory_size   = 10240
   ephemeral_storage {
     size = 4096
@@ -208,10 +208,10 @@ resource "aws_lambda_function" "process_frames" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_process_frames}:latest"
-  timeout       = 180
-  memory_size   = 10240
+  timeout       = 150
+  memory_size   = 8192
   ephemeral_storage {
-    size = 4096
+    size = 2048
   }
   environment {
     variables = {

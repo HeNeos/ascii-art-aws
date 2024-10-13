@@ -13,7 +13,7 @@ from lambdas.custom_types import (
 
 
 def calculate_scale(image_height: int) -> int:
-    max_height = 240
+    max_height = 180
     new_scale: int = (image_height + max_height - 1) // max_height
     return new_scale
 
@@ -38,13 +38,6 @@ def find_media_type(file_path: str) -> MediaFile:
 
 
 def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
-    """
-    Downloads a file from S3 to the local /tmp directory in Lambda.
-
-    :param bucket_name: The name of the S3 bucket
-    :param s3_key: The key of the file in the S3 bucket (i.e., file path)
-    :return local_path: Full local file path
-    """
     local_path = os.path.join("/tmp", os.path.basename(s3_key))
     s3_client.download_file(bucket_name, s3_key, local_path)
 
