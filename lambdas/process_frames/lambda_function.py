@@ -121,7 +121,7 @@ def lambda_handler(event, _) -> dict:
             "/tmp/temp-video.mp4",
             temp_audiofile="/tmp/null-audio.mp3",
             codec="libx264",
-            ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "veryfast"],
+            ffmpeg_params=["-g", "128", "-crf", "23", "-preset", "faster"],
         )
         logger.info("Finish save local video")
         key = save_video(
