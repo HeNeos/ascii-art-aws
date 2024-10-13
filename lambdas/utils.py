@@ -13,7 +13,7 @@ from lambdas.custom_types import (
 
 
 def calculate_scale(image_height: int) -> int:
-    max_height = 240
+    max_height = 180
     new_scale: int = (image_height + max_height - 1) // max_height
     return new_scale
 
