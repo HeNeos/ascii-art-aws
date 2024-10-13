@@ -65,6 +65,7 @@ resource "aws_iam_role" "step_function_role" {
 }
 
 resource "aws_iam_role_policy" "step_function_policy" {
+  name   = "step-function-role-policy-${var.stage}"
   role   = aws_iam_role.step_function_role.id
   policy = <<EOF
 {
