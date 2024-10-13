@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import subprocess
 
 import boto3
 
@@ -11,6 +10,7 @@ from lambdas.utils import (
     save_video,
     split_file_name,
 )
+from lambdas.ffmpeg import add_audio_to_video, merge_videos
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -21,55 +21,8 @@ MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
 
-random_id: str = ""
-
-
-def merge_videos(video_files: list[str], output_path: str) -> None:
-    concat_file = f"/tmp/concat_list-{random_id}.txt"
-    with open(concat_file, "w") as f:
-        for video_file in video_files:
-            f.write(f"file '{video_file}'\n")
-
-    command = [
-        "ffmpeg",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        concat_file,
-        "-b:v",
-        "1M",
-        "-c",
-        "copy",
-        output_path,
-    ]
-    logger.info(f"Merging with: {command}")
-
-    subprocess.run(command, check=True)
-
-
-def add_audio_to_video(video_path: str, audio_path: str, output_path: str) -> None:
-    command = [
-        "ffmpeg",
-        "-i",
-        video_path,
-        "-i",
-        audio_path,
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-shortest",
-        output_path,
-    ]
-
-    subprocess.run(command, check=True)
-
 
 def lambda_handler(event: dict, _) -> dict:
-    global random_id
-
     logger.info(event)
     initial_key: str = event["key"]
     audio_key: str = event["audio_key"]

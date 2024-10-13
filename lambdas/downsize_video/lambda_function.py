@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import logging
 import os
-import subprocess
 
 import boto3
 
@@ -11,6 +10,12 @@ from typing import cast
 from uuid import uuid4
 
 from lambdas.font import Font
+from lambdas.ffmpeg import (
+    get_video_length,
+    trim_video,
+    get_video_resolution,
+    resize_video,
+)
 from lambdas.custom_types import VideoExtension, VideoFile
 from lambdas.utils import download_from_s3, save_video, find_media_type
 
@@ -23,7 +28,7 @@ downsize_video_path: str | None = None
 
 
 @dataclass
-class SplitVideo:
+class SplittedVideo:
     start_time: str
     duration: str | None
     local_path: str
@@ -38,32 +43,16 @@ def convert_time(t: int) -> str:
     return f"00:{minutes:02d}:{(t%60):02d}"
 
 
-def run_ffmpeg(command: list):
-    try:
-        subprocess.run(command, check=True)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error running ffmpeg command: {e}")
-        raise
-
-
-def save_split_video(video_metadata: SplitVideo) -> str:
+def save_split_video(video_metadata: SplittedVideo) -> str:
     if downsize_video_path is None:
         return ""
-    ffmpeg_command = [
-        "ffmpeg",
-        "-ss",
-        video_metadata.start_time,
-        "-i",
+
+    trim_video(
         downsize_video_path,
-    ]
-
-    if video_metadata.duration:
-        ffmpeg_command += ["-t", video_metadata.duration]
-
-    # It's re-encoding again to avoid miss key-frames
-    ffmpeg_command += ["-async", "1", video_metadata.local_path]
-
-    run_ffmpeg(ffmpeg_command)
+        video_metadata.start_time,
+        video_metadata.duration,
+        video_metadata.local_path,
+    )
 
     folder_name = f"{video_metadata.video_name}-{video_metadata.random_id}/{video_metadata.video_name}"
     key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
@@ -73,21 +62,10 @@ def save_split_video(video_metadata: SplitVideo) -> str:
 
 
 def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[str]:
-    ffmpeg_command = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        video_path,
-    ]
-    result = subprocess.run(ffmpeg_command, capture_output=True, text=True)
-    video_duration: float = float(result.stdout.strip())
+    video_duration: float = get_video_length(video_path)
     batch_duration: int = max(1, int((video_duration**0.5) / 5))
 
-    videos_metadata: list[SplitVideo] = []
+    videos_metadata: list[SplittedVideo] = []
     start_time: int = 0
     end_time: int = start_time + batch_duration
     batch_id: int = 1
@@ -97,7 +75,7 @@ def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[
         if end_time >= video_duration:
             end_time = -1
         videos_metadata.append(
-            SplitVideo(
+            SplittedVideo(
                 start_time=convert_time(start_time),
                 duration=convert_time(batch_duration) if end_time > 0 else None,
                 local_path=f"/tmp/{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}",
@@ -113,41 +91,9 @@ def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[
         end_time += batch_duration
         batch_id += 1
 
-    logger.info("Start splitting")
-
     pool = Pool(cpu_count())
     processed_keys = pool.map(save_split_video, videos_metadata)
     return processed_keys
-
-
-def get_video_resolution(path: str) -> tuple[int, int]:
-    ffprobe_command = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "stream=width,height",
-        "-of",
-        "csv=s=x:p=0",
-        path,
-    ]
-    ffprobe_result = subprocess.run(ffprobe_command, capture_output=True, text=True)
-    video_width, video_height = map(int, ffprobe_result.stdout.strip().split("x"))
-    return video_width, video_height
-
-
-def resize_video(path: str, width: int, height: int, output_path: str):
-    ffmpeg_command = [
-        "ffmpeg",
-        "-i",
-        path,
-        "-vf",
-        f"scale={width}:{height}",
-        "-preset",
-        "veryfast",
-        output_path,
-    ]
-    run_ffmpeg(ffmpeg_command)
 
 
 def lambda_handler(event: dict, _) -> dict:
