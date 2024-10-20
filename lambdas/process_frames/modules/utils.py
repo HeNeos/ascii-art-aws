@@ -28,7 +28,7 @@ def create_ascii_image(
     context = cairo.Context(surface)
 
     context.select_font_face(
-        "Monospace", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL
+        "Consolas", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL
     )
     context.set_font_size(12)
 

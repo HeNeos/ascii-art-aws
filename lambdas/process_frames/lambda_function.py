@@ -103,8 +103,6 @@ def lambda_handler(event, _) -> dict:
     if is_video:
         video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)
         video_fps = video_capture.get(cv2.CAP_PROP_FPS)
-        video_width: int = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        video_height: int = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         frames: Frames = extract_frames(video_capture, cast(VideoFile, media_file))
         video_capture.release()
         ascii_frames: list[ImageSurface] = []
@@ -120,10 +118,10 @@ def lambda_handler(event, _) -> dict:
         video = ImageSequenceClip(
             [
                 np.ndarray(
-                    shape=(video_height, video_width, 4),
+                    shape=(frame.get_height(), frame.get_width(), 4),
                     dtype=np.uint8,
                     buffer=frame.get_data(),
-                )
+                )[..., :3][:, :, ::-1]
                 for frame in ascii_frames
             ],
             fps=video_fps,
