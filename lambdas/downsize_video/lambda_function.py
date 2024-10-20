@@ -106,7 +106,7 @@ def lambda_handler(event: dict, _) -> dict:
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
 
     video_width, video_height = get_video_resolution(local_file)
-    new_height: int = 120
+    new_height: int = 80
     scale_factor: float = new_height / video_height
     new_width = int(Font.Height.value / Font.Width.value * scale_factor * video_width)
     if new_width % 2 == 1:

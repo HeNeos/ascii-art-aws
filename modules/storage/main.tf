@@ -28,7 +28,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "audio" {
   rule {
     id = "Delete old files"
     expiration {
-      days = 5
+      days = 2
     }
     status = "Enabled"
   }

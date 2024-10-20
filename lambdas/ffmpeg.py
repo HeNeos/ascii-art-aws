@@ -42,8 +42,10 @@ def resize_video(video_path: str, width: int, height: int, output_path: str) -> 
         video_path,
         "-vf",
         f"scale={width}:{height}",
+        "-crf",
+        "15",
         "-preset",
-        "veryfast",
+        "fast",
         output_path,
     ]
     subprocess.run(ffmpeg_command, check=True)
@@ -103,7 +105,9 @@ def merge_videos(video_files: list[str], output_path: str) -> None:
         "-i",
         concat_file,
         "-b:v",
-        "5M",
+        "4M",
+        "-crf",
+        "24",
         "-preset",
         "medium",
         "-c:v",
