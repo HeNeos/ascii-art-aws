@@ -154,7 +154,7 @@ resource "aws_lambda_function" "downsize_video" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_video}:latest"
   timeout       = 90
-  memory_size   = 4096
+  memory_size   = 8192
   ephemeral_storage {
     size = 4096
   }
@@ -209,7 +209,7 @@ resource "aws_lambda_function" "process_frames" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_process_frames}:latest"
   timeout       = 150
-  memory_size   = 4096
+  memory_size   = 8192
   ephemeral_storage {
     size = 2048
   }
