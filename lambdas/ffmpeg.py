@@ -103,7 +103,7 @@ def merge_videos(video_files: list[str], output_path: str) -> None:
         "-i",
         concat_file,
         "-b:v",
-        "2M",
+        "3M",
         "-preset",
         "medium",
         "-c:v",

@@ -99,7 +99,7 @@ resource "aws_lambda_function" "downsize_media" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_media}:latest"
   timeout       = 30
-  memory_size   = 4096
+  memory_size   = 8192
   ephemeral_storage {
     size = 1024
   }
