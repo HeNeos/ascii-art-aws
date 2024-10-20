@@ -32,4 +32,3 @@ Even when it's possible to process a higher resolution with a higher bitrate, th
 TODO: 
   - Process videos without audio.
   - Implement API GW (lambda URL for videos, API GW for images)
-  - Lifecycle policy S3
