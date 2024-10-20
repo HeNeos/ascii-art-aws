@@ -1,7 +1,7 @@
 import io
 import os
 
-from PIL import Image
+from cairo import ImageSurface
 
 from lambdas.custom_types import (
     ImageExtension,
@@ -47,12 +47,14 @@ def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
 def save_image(
     s3_client,
     bucket_name: str,
-    image: Image.Image,
+    image: ImageSurface,
     image_format: ImageExtension,
     key: str,
 ) -> str:
     with io.BytesIO() as buffer:
-        image.save(buffer, format=image_format.value)
+        if image_format is not ImageExtension.PNG:
+            image_format = ImageExtension.PNG
+        image.write_to_png(buffer)
         buffer.seek(0)
         s3_client.put_object(
             Body=buffer.getvalue(),
