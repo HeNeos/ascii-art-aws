@@ -1,39 +1,24 @@
 import json
 import logging
 import os
-from typing import cast
-
-import cv2
-import numpy as np
+from typing import TypedDict, cast
 
 import boto3
-
-from cv2.typing import MatLike
+import cv2
+import numpy as np
 from cairo import ImageSurface
+from cv2.typing import MatLike
 from moviepy.editor import ImageSequenceClip
 from PIL import Image
+
+from lambdas.custom_types import (AsciiColors, AsciiImage, FrameData, Frames,
+                                  ImageExtension, MediaFile, VideoFile)
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
-from lambdas.process_frames.modules.utils import (
-    create_ascii_image,
-    create_char_array,
-    map_to_char_vectorized,
-)
-from lambdas.utils import (
-    download_from_s3,
-    find_media_type,
-    save_image,
-    save_video,
-    split_file_name,
-)
-from lambdas.custom_types import (
-    AsciiImage,
-    AsciiColors,
-    ImageExtension,
-    FrameData,
-    Frames,
-    MediaFile,
-    VideoFile,
-)
+from lambdas.process_frames.modules.utils import (create_ascii_image,
+                                                  create_char_array,
+                                                  map_to_char_vectorized)
+from lambdas.utils import (download_from_s3, find_media_type, save_image,
+                           save_video, split_file_name)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -42,6 +27,13 @@ s3_client = boto3.client("s3")
 
 ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
+
+
+class LambdaEvent(TypedDict):
+    key: str
+    processed_key: str
+    is_video: bool
+    random_id: str
 
 
 def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
@@ -88,10 +80,10 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> Fr
     return frames
 
 
-def lambda_handler(event, _) -> dict:
+def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     logger.info(event)
 
-    initial_key = event["key"]
+    initial_key: str = event["key"]
     video_name, _ = split_file_name(initial_key)
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
@@ -137,7 +129,7 @@ def lambda_handler(event, _) -> dict:
             s3_client,
             ASCII_ART_BUCKET,
             "/tmp/temp-video.mp4",
-            f"{video_name}-{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}",
+            f"{video_name}-{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}",  # noqa: 501
         )
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")
@@ -162,4 +154,7 @@ def lambda_handler(event, _) -> dict:
             "ascii_art_key": key,
             "body": json.dumps(cast(dict[str, str], {"url": url})),
         }
-    return {"ascii_art_key": key}
+    return {
+        "statusCode": 200,
+        "ascii_art_key": key,
+    }

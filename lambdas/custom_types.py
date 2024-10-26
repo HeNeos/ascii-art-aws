@@ -1,8 +1,9 @@
-from typing import TypeAlias
-from PIL import Image
 from dataclasses import dataclass
 from enum import Enum
+from typing import TypeAlias
+
 from cv2.typing import MatLike
+from PIL import Image
 
 Scale: TypeAlias = float | int
 Color: TypeAlias = tuple[int, int, int]

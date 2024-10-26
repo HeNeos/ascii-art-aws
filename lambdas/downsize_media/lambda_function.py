@@ -1,22 +1,24 @@
 import logging
-import boto3
-
-from typing import cast
-from PIL import Image
+from typing import TypedDict, cast
 from uuid import uuid4
 
-from lambdas.font import Font
+import boto3
+from mypy_boto3_s3.client import S3Client
+from PIL import Image
+
 from lambdas.custom_types import ImageFile
-from lambdas.utils import (
-    calculate_scale,
-    download_from_s3,
-    save_image,
-    find_media_type,
-)
+from lambdas.font import Font
+from lambdas.utils import (calculate_scale, download_from_s3, find_media_type,
+                           save_image)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-s3_client = boto3.client("s3")
+s3_client: S3Client = boto3.client("s3")
+
+
+class LambdaEvent(TypedDict):
+    key: str
+    bucket_name: str
 
 
 def rescale_image(image: Image.Image) -> Image.Image:
@@ -28,11 +30,11 @@ def rescale_image(image: Image.Image) -> Image.Image:
     return resized_image
 
 
-def lambda_handler(event: dict, _) -> dict:
+def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     file_path: str = event["key"]
-    bucket_name = event["bucket_name"]
-    random_id = uuid4().hex
+    bucket_name: str = event["bucket_name"]
+    random_id: str = uuid4().hex
 
     image_file: ImageFile = cast(ImageFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)

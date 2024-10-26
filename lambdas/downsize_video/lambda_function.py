@@ -1,23 +1,18 @@
-from dataclasses import dataclass
 import logging
 import os
-
-import boto3
-
-from lambda_multiprocessing import Pool
+from dataclasses import dataclass
 from multiprocessing import cpu_count
-from typing import cast
+from typing import TypedDict, cast
 from uuid import uuid4
 
-from lambdas.font import Font
-from lambdas.ffmpeg import (
-    get_video_length,
-    trim_video,
-    get_video_resolution,
-    resize_video,
-)
+import boto3
+from lambda_multiprocessing import Pool
+
 from lambdas.custom_types import VideoExtension, VideoFile
-from lambdas.utils import download_from_s3, save_video, find_media_type
+from lambdas.ffmpeg import (get_video_length, get_video_resolution,
+                            resize_video, trim_video)
+from lambdas.font import Font
+from lambdas.utils import download_from_s3, find_media_type, save_video
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -25,6 +20,10 @@ s3_client = boto3.client("s3")
 
 bucket_name: str = os.environ["MEDIA_BUCKET"]
 downsize_video_path: str | None = None
+
+
+class LambdaEvent(TypedDict):
+    key: str
 
 
 @dataclass
@@ -54,8 +53,8 @@ def save_split_video(video_metadata: SplittedVideo) -> str:
         video_metadata.local_path,
     )
 
-    folder_name = f"{video_metadata.video_name}-{video_metadata.random_id}/{video_metadata.video_name}"
-    key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
+    folder_name = f"{video_metadata.video_name}-{video_metadata.random_id}/{video_metadata.video_name}"  # noqa: 501
+    key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"  # noqa: 501
     return save_video(
         s3_client, bucket_name, video_metadata.local_path, f"processed/{key}"
     )
@@ -78,7 +77,7 @@ def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[
             SplittedVideo(
                 start_time=convert_time(start_time),
                 duration=convert_time(batch_duration) if end_time > 0 else None,
-                local_path=f"/tmp/{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}",
+                local_path=f"/tmp/{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}",  # noqa: 501
                 batch_id=batch_id,
                 video_name=media_file.file_name,
                 video_extension=media_file.extension,
@@ -92,15 +91,15 @@ def split_video(video_path: str, media_file: VideoFile, random_id: str) -> list[
         batch_id += 1
 
     pool = Pool(cpu_count())
-    processed_keys = pool.map(save_split_video, videos_metadata)
+    processed_keys: list[str] = pool.map(save_split_video, videos_metadata)
     return processed_keys
 
 
-def lambda_handler(event: dict, _) -> dict:
+def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     global downsize_video_path
     logger.info(event)
     file_path: str = event["key"]
-    random_id = uuid4().hex
+    random_id: str = uuid4().hex
 
     video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)

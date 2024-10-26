@@ -1,27 +1,34 @@
-import numpy as np
-import cairo
 import ctypes as ct
-
 from typing import no_type_check
 
+import cairo
+import numpy as np
+import numpy.typing as npt
+
+from lambdas.custom_types import AsciiColors, AsciiImage
 from lambdas.font import Font
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
-from lambdas.custom_types import AsciiImage, AsciiColors
 
 _initialized: bool = False
 face: cairo.FontFace | None = None
 
 
-def create_char_array(ascii_dict: AsciiDict) -> np.ndarray:
+def create_char_array(ascii_dict: AsciiDict) -> npt.NDArray[np.str_]:
     return np.array(list(ascii_dict.value))
 
 
-def map_to_char_vectorized(values: np.ndarray, char_array: np.ndarray) -> np.ndarray:
-    return char_array[np.digitize(values, np.linspace(0, 256, len(char_array) + 1)) - 1]
+def map_to_char_vectorized(
+    values: np.ndarray, char_array: np.ndarray
+) -> npt.NDArray[np.str_]:
+    positions: npt.NDArray[np.int32] = (
+        np.digitize(values, np.linspace(0, 256, len(char_array) + 1)) - 1
+    )
+    return char_array[positions]
 
 
 # https://www.cairographics.org/cookbook/freetypepython/
 @no_type_check
+# mypy: disable-error-code=name-defined
 def create_cairo_font_face_for_file(
     filename, faceindex=0, loadoptions=0
 ) -> cairo.FontFace:

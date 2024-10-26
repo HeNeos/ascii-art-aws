@@ -1,17 +1,13 @@
 import io
 import os
-
-from cairo import ImageSurface
-from PIL import Image
 from typing import cast
 
-from lambdas.custom_types import (
-    ImageExtension,
-    MediaFile,
-    VideoFile,
-    ImageFile,
-    VideoExtension,
-)
+from cairo import ImageSurface
+from mypy_boto3_s3.client import S3Client
+from PIL import Image
+
+from lambdas.custom_types import (ImageExtension, ImageFile, MediaFile,
+                                  VideoExtension, VideoFile)
 
 
 def calculate_scale(image_height: int) -> int:
@@ -39,7 +35,7 @@ def find_media_type(file_path: str) -> MediaFile:
     raise ValueError(f"Unsupported file extension: {file_extension}")
 
 
-def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
+def download_from_s3(s3_client: S3Client, bucket_name: str, s3_key: str) -> str:
     local_path = os.path.join("/tmp", os.path.basename(s3_key))
     s3_client.download_file(bucket_name, s3_key, local_path)
 
@@ -47,7 +43,7 @@ def download_from_s3(s3_client, bucket_name: str, s3_key: str) -> str:
 
 
 def save_image(
-    s3_client,
+    s3_client: S3Client,
     bucket_name: str,
     image: ImageSurface | Image.Image,
     image_format: ImageExtension,
@@ -72,7 +68,9 @@ def save_image(
     return key
 
 
-def save_video(s3_client, bucket_name: str, local_video_path: str, key: str) -> str:
+def save_video(
+    s3_client: S3Client, bucket_name: str, local_video_path: str, key: str
+) -> str:
     with open(local_video_path, "rb") as f:
         s3_client.upload_fileobj(f, bucket_name, key)
         return key

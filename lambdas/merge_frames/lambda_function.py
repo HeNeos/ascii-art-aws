@@ -1,28 +1,32 @@
 import json
 import logging
 import os
+from typing import TypedDict, cast
 
 import boto3
+from mypy_boto3_s3 import S3Client
 
-from typing import cast
-from lambdas.utils import (
-    download_from_s3,
-    save_video,
-    split_file_name,
-)
 from lambdas.ffmpeg import add_audio_to_video, merge_videos
+from lambdas.utils import download_from_s3, save_video, split_file_name
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-s3_client = boto3.client("s3")
+s3_client: S3Client = boto3.client("s3")
 
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
 AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
 
 
-def lambda_handler(event: dict, _) -> dict:
+class LambdaEvent(TypedDict):
+    key: str
+    audio_key: str
+    videos_key: list[str]
+    random_id: str
+
+
+def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     initial_key: str = event["key"]
     audio_key: str = event["audio_key"]

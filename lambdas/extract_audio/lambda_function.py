@@ -1,10 +1,9 @@
 import logging
 import os
+from typing import TypedDict, cast
 
 import boto3
-
-from typing import cast
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy.editor import AudioFileClip, VideoFileClip
 
 from lambdas.custom_types import VideoFile
 from lambdas.utils import download_from_s3, find_media_type
@@ -18,7 +17,13 @@ AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 
 
-def lambda_handler(event: dict, _) -> dict:
+class LambdaEvent(TypedDict):
+    downsize_video: str
+    random_id: str
+    key: str
+
+
+def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     file_path: str = event["downsize_video"]
     random_id: str = event["random_id"]
