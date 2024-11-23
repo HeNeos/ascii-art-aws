@@ -8,12 +8,12 @@
 
 |Original|Ascii|
 |--------|-----|
-|![jaden_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1.PNG)|![jaden_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1_resized-ae5b6be6b02d4802abe229e1f1450742_ascii.png)|
+|![jaden_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1.PNG)|![jaden_ascii](https://github.com/user-attachments/assets/408d97e3-4d80-4255-b59a-bc589af6f17d)|
 
 
 |Original|Ascii|
 |--------|-----|
-|<video src="https://github.com/user-attachments/assets/e923b3fa-91c2-4db0-8383-d81248b31a35">| <video src="https://github.com/user-attachments/assets/1f22e824-cb0d-42cd-9103-be87f7efa8df"></video> |
+|<video src="https://github.com/user-attachments/assets/e923b3fa-91c2-4db0-8383-d81248b31a35">| <video src="https://github.com/user-attachments/assets/1f97d164-5150-48f9-a377-b4c4d3b7720a"></video> |
 
 ## Description
 
