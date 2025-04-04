@@ -5,8 +5,8 @@ import cairo
 import numpy as np
 import numpy.typing as npt
 
-from lambdas.custom_types import AsciiColors, AsciiImage
-from lambdas.font import Font
+from lambdas.utils.custom_types import AsciiColors, AsciiImage
+from lambdas.utils.font import Font
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
 
 _initialized: bool = False
@@ -137,9 +137,9 @@ def create_ascii_image(
     context = cairo.Context(surface)
 
     if face is None:
-        face = create_cairo_font_face_for_file("consolas.ttf", 0)
+        face = create_cairo_font_face_for_file(Font.Name.value, 0)
     context.set_font_face(face)
-    context.set_font_size(12)
+    context.set_font_size(Font.Size.value)
 
     y = 0
     for row in range(rows):

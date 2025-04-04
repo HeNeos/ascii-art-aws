@@ -11,14 +11,28 @@ from cv2.typing import MatLike
 from moviepy.editor import ImageSequenceClip
 from PIL import Image
 
-from lambdas.custom_types import (AsciiColors, AsciiImage, FrameData, Frames,
-                                  ImageExtension, MediaFile, VideoFile)
+from lambdas.utils.custom_types import (
+    AsciiColors,
+    AsciiImage,
+    ImageExtension,
+    MediaFile,
+    VideoFile,
+)
+
+from lambdas.process_frames.modules.frames import FrameData, Frames
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
-from lambdas.process_frames.modules.utils import (create_ascii_image,
-                                                  create_char_array,
-                                                  map_to_char_vectorized)
-from lambdas.utils import (download_from_s3, find_media_type, save_image,
-                           save_video, split_file_name)
+from lambdas.process_frames.modules.utils import (
+    create_ascii_image,
+    create_char_array,
+    map_to_char_vectorized,
+)
+from lambdas.utils.utils import (
+    download_from_s3,
+    find_media_type,
+    split_file_name,
+)
+
+from lambdas.utils.save import ImageCairo, save_video
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -134,11 +148,13 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")
         ascii_image = ascii_convert(image)
-        key = save_image(
+        image_object: ImageCairo = ImageCairo(
+            ascii_image, ImageExtension(media_file.extension)
+        )
+        image_object.write_to_buffer()
+        key = image_object.save_image(
             s3_client,
             ASCII_ART_BUCKET,
-            ascii_image,
-            ImageExtension(media_file.extension),
             f"{media_file.file_name}_ascii.{media_file.extension.value}",
         )
         url: str = s3_client.generate_presigned_url(

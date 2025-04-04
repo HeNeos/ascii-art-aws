@@ -6,8 +6,9 @@ from typing import TypedDict, cast
 import boto3
 from mypy_boto3_s3 import S3Client
 
-from lambdas.ffmpeg import add_audio_to_video, merge_videos
-from lambdas.utils import download_from_s3, save_video, split_file_name
+from lambdas.utils.ffmpeg import add_audio_to_video, merge_videos
+from lambdas.utils.utils import download_from_s3, split_file_name
+from lambdas.utils.save import save_video
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

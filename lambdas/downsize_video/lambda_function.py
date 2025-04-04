@@ -8,11 +8,16 @@ from uuid import uuid4
 import boto3
 from lambda_multiprocessing import Pool
 
-from lambdas.custom_types import VideoExtension, VideoFile
-from lambdas.ffmpeg import (get_video_length, get_video_resolution,
-                            resize_video, trim_video)
-from lambdas.font import Font
-from lambdas.utils import download_from_s3, find_media_type, save_video
+from lambdas.utils.custom_types import VideoExtension, VideoFile
+from lambdas.utils.ffmpeg import (
+    get_video_length,
+    get_video_resolution,
+    resize_video,
+    trim_video,
+)
+from lambdas.utils.font import Font
+from lambdas.utils.utils import download_from_s3, find_media_type
+from lambdas.utils.save import save_video
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -20,6 +25,9 @@ s3_client = boto3.client("s3")
 
 bucket_name: str = os.environ["MEDIA_BUCKET"]
 downsize_video_path: str | None = None
+
+MAX_HEIGHT: int = 720
+DOWNSIZE_HEIGHT: int = MAX_HEIGHT // Font.Height.value
 
 
 class LambdaEvent(TypedDict):
@@ -39,7 +47,7 @@ class SplittedVideo:
 
 def convert_time(t: int) -> str:
     minutes = t // 60
-    return f"00:{minutes:02d}:{(t%60):02d}"
+    return f"00:{minutes:02d}:{(t % 60):02d}"
 
 
 def save_split_video(video_metadata: SplittedVideo) -> str:
@@ -105,16 +113,25 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
 
     video_width, video_height = get_video_resolution(local_file)
-    new_height: int = 80
-    scale_factor: float = new_height / video_height
-    new_width = int(Font.Height.value / Font.Width.value * scale_factor * video_width)
+    new_width: int = int(video_width * MAX_HEIGHT / video_height)
     if new_width % 2 == 1:
         new_width += 1
+    # if DOWNSIZE_HEIGHT % 2 == 1:
+    #     DOWNSIZE_HEIGHT += 1
+    downsize_width: int = int(
+        DOWNSIZE_HEIGHT
+        * video_width
+        * (Font.Height.value / Font.Width.value)
+        / video_height
+    )
+
+    if downsize_width % 2 == 1:
+        downsize_width += 1
 
     downsize_video_path = (
         f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}"
     )
-    resize_video(local_file, new_width, new_height, downsize_video_path)
+    resize_video(local_file, downsize_width, DOWNSIZE_HEIGHT, downsize_video_path)
 
     video_folder_name = f"{video_file.file_name}-{random_id}/{video_file.file_name}"
 

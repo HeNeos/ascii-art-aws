@@ -2,6 +2,10 @@ from enum import Enum
 
 
 class AsciiDict(Enum):
-    BigDict = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@"  # noqa: 501
-    HighAsciiDict = " `.-,:!*|lowO#0@"
-    LowAsciiDict = " `.,:!|lw#@"
+    BigAsciiDict = (
+        " `-.'_:,"
+        + '"'
+        + "~^=;!><+\\/*?crL)7T(|zJsviCltF1}{I3fY[]5nu2xjZoSyeaEPVhkU694KGwbdqOpXHAmRD#08WBM%N$Qg&@"  # noqa: E501
+    )
+    HighAsciiDict = " :!si{35aVU9qOD#8$&@@"
+    LowAsciiDict = " !loa6O#8&@"

@@ -4,8 +4,6 @@ RUN dnf update -y && \
   dnf install -y \
   python3-devel \
   gcc \
-  cairo \
-  cairo-devel \
   pkgconfig \
   gcc
 

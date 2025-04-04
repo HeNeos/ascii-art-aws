@@ -6,8 +6,6 @@ RUN dnf update -y && \
   python3.11-pip \
   python3.11-devel \
   gcc \
-  cairo \
-  cairo-devel \
   pkgconfig \
   git \
   unzip \

@@ -3,10 +3,10 @@ import os
 from typing import TypedDict, cast
 
 import boto3
-from moviepy.editor import AudioFileClip, VideoFileClip
 
-from lambdas.custom_types import VideoFile
-from lambdas.utils import download_from_s3, find_media_type
+from lambdas.utils.custom_types import VideoFile
+from lambdas.utils.utils import download_from_s3, find_media_type
+from lambdas.utils.ffmpeg import extract_audio
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -27,18 +27,18 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     file_path: str = event["downsize_video"]
     random_id: str = event["random_id"]
-
     video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
 
-    video = VideoFileClip(local_file)
-    audio_clip: AudioFileClip | None = video.audio
-    if audio_clip is None:
+    audio_file_name = f"{video_file.file_name}-{random_id}"
+    audio_path: str = f"/tmp/{audio_file_name}.mp3"
+    extract_audio(local_file, audio_path)
+
+    if audio_path is None:  # TODO: check if audio_path has a size
         processed_key = ""
     else:
-        audio_clip.write_audiofile("/tmp/audio.mp3")
-        processed_key = f"{video_file.file_name}-{random_id}/audio.mp3"
-        with open("/tmp/audio.mp3", "rb") as f:
+        processed_key = f"{audio_file_name}/audio.mp3"
+        with open(audio_path, "rb") as f:
             s3_client.upload_fileobj(f, AUDIO_BUCKET, processed_key)
 
     return {
