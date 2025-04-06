@@ -15,10 +15,10 @@ RUN dnf update -y && \
   wget \
   tar
 
-RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
-  tar -xf ffmpeg-release-amd64-static.tar.xz --strip-components=1 -C /usr/local/bin && \
+RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz && \
+  tar -xf ffmpeg-release-arm64-static.tar.xz --strip-components=1 -C /usr/local/bin && \
   ln -sf /usr/local/bin/ffmpeg /usr/bin/ffmpeg && \
-  rm -f ffmpeg-release-amd64-static.tar.xz
+  rm -f ffmpeg-release-arm64-static.tar.xz
 
 RUN pip3.11 install awslambdaric
 ENTRYPOINT ["python3.11", "-m", "awslambdaric"]

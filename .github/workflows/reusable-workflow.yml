@@ -157,13 +157,17 @@ jobs:
 
   build_and_push_docker:
     name: Build and push Docker Images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: deploy_ecr
     steps:
       - name: Git checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 5
+
+      - name: Set up Docker Buildx
+        run: |
+          docker buildx create --use
 
       - name: Configure AWS credentials from AWS account
         uses: aws-actions/configure-aws-credentials@v1
@@ -205,7 +209,7 @@ jobs:
                 echo "No changes, skipping lambda"
               else
                 (
-                  docker build -t "$repo_name" -f "$function_name/Dockerfile" . &&
+                  docker buildx build --platform linux/arm64 --provenance=false -t "$repo_name" -f "$function_name/Dockerfile" . &&
                   docker push "$repo_name"
                 ) &
               fi

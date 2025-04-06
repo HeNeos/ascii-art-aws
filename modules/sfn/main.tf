@@ -100,6 +100,7 @@ resource "aws_lambda_function" "downsize_media" {
   image_uri     = "${var.lambda_image_downsize_media}:latest"
   timeout       = 30
   memory_size   = 6144
+  architectures = ["arm64"]
   ephemeral_storage {
     size = 1024
   }
@@ -155,6 +156,7 @@ resource "aws_lambda_function" "downsize_video" {
   image_uri     = "${var.lambda_image_downsize_video}:latest"
   timeout       = 90
   memory_size   = 8192
+  architectures = ["arm64"]
   ephemeral_storage {
     size = 4096
   }
@@ -173,6 +175,7 @@ resource "aws_lambda_function" "extract_audio" {
   image_uri     = "${var.lambda_image_extract_audio}:latest"
   timeout       = 40
   memory_size   = 1024
+  architectures = ["arm64"]
 
   environment {
     variables = {
@@ -189,6 +192,7 @@ resource "aws_lambda_function" "merge_frames" {
   image_uri     = "${var.lambda_image_merge_frames}:latest"
   timeout       = 240
   memory_size   = 8192
+  architectures = ["arm64"]
 
   ephemeral_storage {
     size = 4096
@@ -210,6 +214,7 @@ resource "aws_lambda_function" "process_frames" {
   image_uri     = "${var.lambda_image_process_frames}:latest"
   timeout       = 150
   memory_size   = 6144
+  architectures = ["arm64"]
   ephemeral_storage {
     size = 2048
   }
