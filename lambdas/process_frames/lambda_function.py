@@ -6,6 +6,7 @@ from typing import TypedDict, cast
 import boto3
 import cv2
 import numpy as np
+import numpy.typing as npt
 from cairo import ImageSurface
 from cv2.typing import MatLike
 from moviepy.editor import ImageSequenceClip
@@ -19,6 +20,8 @@ from lambdas.utils.custom_types import (
     VideoFile,
 )
 
+from lambdas.utils.font import Font
+
 from lambdas.process_frames.modules.frames import FrameData, Frames
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
 from lambdas.process_frames.modules.utils import (
@@ -26,6 +29,8 @@ from lambdas.process_frames.modules.utils import (
     create_char_array,
     map_to_char_vectorized,
 )
+from lambdas.process_frames.dithering import DitheringStrategy
+from lambdas.process_frames.dithering.utils import get_dithering_strategy
 from lambdas.utils.utils import (
     download_from_s3,
     find_media_type,
@@ -48,22 +53,24 @@ class LambdaEvent(TypedDict):
     processed_key: str
     is_video: bool
     random_id: str
+    dithering: str
 
 
-def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
-    img_array = np.array(image)
-    height, width, _ = img_array.shape
+def process_image(
+    image: Image.Image,
+    char_array: npt.NDArray[np.str_],
+    dithering_strategy: type[DitheringStrategy] | None = None,
+) -> tuple[AsciiImage, AsciiColors]:
+    img_array: npt.NDArray[np.uint8] = np.array(image, dtype=np.uint8)
 
-    gray_array = np.dot(img_array[..., :3], [0.2989, 0.5870, 0.1140])
-
-    ascii_dict = (
-        AsciiDict.HighAsciiDict
-        if width * height >= 180 * 180
-        else AsciiDict.LowAsciiDict
+    gray_array: npt.NDArray[np.float64] = np.clip(
+        np.dot(img_array[..., :3], [0.3090, 0.5770, 0.1240]), 0.0, 255.0
     )
-    char_array = create_char_array(ascii_dict)
 
-    ascii_chars = map_to_char_vectorized(gray_array, char_array)
+    if dithering_strategy is not None:
+        gray_array = dithering_strategy.dithering(gray_array, len(char_array))
+
+    ascii_chars: npt.NDArray[np.str_] = map_to_char_vectorized(gray_array, char_array)
 
     grid: AsciiImage = ascii_chars.tolist()
     image_colors: AsciiColors = [row.tolist() for row in img_array]
@@ -71,8 +78,14 @@ def process_image(image: Image.Image) -> tuple[AsciiImage, AsciiColors]:
     return grid, image_colors
 
 
-def ascii_convert(image: Image.Image) -> ImageSurface:
-    grid, image_colors = process_image(image=image)
+def ascii_convert(
+    image: Image.Image,
+    char_array: npt.NDArray[np.str_],
+    dithering_strategy: type[DitheringStrategy] | None,
+) -> ImageSurface:
+    grid, image_colors = process_image(
+        image=image, char_array=char_array, dithering_strategy=dithering_strategy
+    )
     return create_ascii_image(grid, image_colors)
 
 
@@ -102,24 +115,35 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
     random_id: str = event["random_id"]
+    dithering: str = event.get("dithering", "riemersma_naive")
+    dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
     media_file: MediaFile = find_media_type(file_path)
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
 
     if is_video:
         video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)
+        width, height = video_capture.get()  # TODO
         video_fps = video_capture.get(cv2.CAP_PROP_FPS)
         frames: Frames = extract_frames(video_capture, cast(VideoFile, media_file))
         video_capture.release()
-        ascii_frames: list[ImageSurface] = []
         logger.info("Finish extract frames")
-        for frame in frames:
-            ascii_image = ascii_convert(
+        ascii_dict = (
+            AsciiDict.HighAsciiDict
+            if width * height >= (1600 // Font.Width.value) * (900 // Font.Height.value)
+            else AsciiDict.LowAsciiDict
+        )
+        char_array: npt.NDArray[np.str_] = create_char_array(ascii_dict)
+        ascii_frames: list[ImageSurface] = [
+            ascii_convert(
                 Image.fromarray(
-                    cv2.cvtColor(cast(MatLike, frame.frame), cv2.COLOR_BGR2RGB)
-                )
+                    cv2.cvtColor(cast(MatLike, frame.frame), cv2.COLOR_BGR2RGB),
+                ),
+                char_array,
+                dithering_strategy,
             )
-            ascii_frames.append(ascii_image)
+            for frame in frames
+        ]
         logger.info("Finish ascii-ed frames")
         video = ImageSequenceClip(
             [
@@ -147,7 +171,14 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         )
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")
-        ascii_image = ascii_convert(image)
+        width, height = image.size
+        ascii_dict = (
+            AsciiDict.HighAsciiDict
+            if width * height >= (1600 // Font.Width.value) * (900 // Font.Height.value)
+            else AsciiDict.LowAsciiDict
+        )
+        char_array = create_char_array(ascii_dict)
+        ascii_image = ascii_convert(image, char_array, dithering_strategy)
         image_object: ImageCairo = ImageCairo(
             ascii_image, ImageExtension(media_file.extension)
         )
