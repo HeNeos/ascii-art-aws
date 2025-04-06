@@ -45,8 +45,9 @@ logger.setLevel(logging.INFO)
 
 s3_client = boto3.client("s3")
 
-ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
-MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
+DEFAULT_DITHERING: str = os.environ["DEFAULT_DITHERING"]
+ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
+MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
 
 
 class LambdaEvent(TypedDict):
@@ -116,7 +117,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
     random_id: str = event["random_id"]
-    dithering: str = event.get("dithering", "riemersma_naive")
+    dithering: str = event.get("dithering", DEFAULT_DITHERING)
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
     media_file: MediaFile = find_media_type(file_path)

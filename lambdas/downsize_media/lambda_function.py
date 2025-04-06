@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import TypedDict, cast
 from uuid import uuid4
 
@@ -16,7 +17,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 s3_client: S3Client = boto3.client("s3")
 
-MAX_HEIGHT: int = 1440
+MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
 
 
 class LambdaEvent(TypedDict):

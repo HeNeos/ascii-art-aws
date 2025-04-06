@@ -108,6 +108,7 @@ resource "aws_lambda_function" "downsize_media" {
   environment {
     variables = {
       MEDIA_BUCKET = var.media_bucket_name
+      MAX_HEIGHT   = "2160"
     }
   }
 }
@@ -164,6 +165,7 @@ resource "aws_lambda_function" "downsize_video" {
   environment {
     variables = {
       MEDIA_BUCKET = var.media_bucket_name
+      MAX_HEIGHT   = "480"
     }
   }
 }
@@ -220,9 +222,10 @@ resource "aws_lambda_function" "process_frames" {
   }
   environment {
     variables = {
-      ASCII_ART_BUCKET = var.ascii_art_bucket_name
-      MEDIA_BUCKET     = var.media_bucket_name
-      NUMBA_CACHE_DIR  = "/tmp/__pycache__/"
+      ASCII_ART_BUCKET  = var.ascii_art_bucket_name
+      MEDIA_BUCKET      = var.media_bucket_name
+      NUMBA_CACHE_DIR   = "/tmp/__pycache__/"
+      DEFAULT_DITHERING = "atkinson"
     }
   }
 }

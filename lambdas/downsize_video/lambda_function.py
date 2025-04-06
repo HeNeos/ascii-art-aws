@@ -24,9 +24,9 @@ logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
 bucket_name: str = os.environ["MEDIA_BUCKET"]
+MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
 downsize_video_path: str | None = None
 
-MAX_HEIGHT: int = 720
 DOWNSIZE_HEIGHT: int = MAX_HEIGHT // Font.Height.value
 
 
