@@ -24,7 +24,9 @@ ENTRYPOINT ["python3.11", "-m", "awslambdaric"]
 COPY merge_frames/requirements.txt .
 RUN pip3.11 install --no-cache-dir -r requirements.txt
 
-COPY *.py ./lambdas/
+COPY __init__.py ./lambdas/
+
+COPY utils/*.py ./lambdas/utils/
 
 COPY merge_frames/lambda_function.py ./lambdas/merge_frames/lambda_function.py
 

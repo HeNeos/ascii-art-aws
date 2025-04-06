@@ -3,3 +3,5 @@ pycairo==1.27.0
 opencv-contrib-python-headless==4.10.0.84
 numpy==1.26.4
 numba==0.60.0
+boto3==1.35.39
+mypy-boto3-s3==1.35.46

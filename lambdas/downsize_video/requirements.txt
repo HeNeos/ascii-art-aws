@@ -1,3 +1,4 @@
 numpy==1.26.4
 lambda_multiprocessing==0.5
 boto3==1.35.39
+mypy-boto3-s3==1.35.46

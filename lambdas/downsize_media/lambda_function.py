@@ -16,7 +16,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 s3_client: S3Client = boto3.client("s3")
 
-MAX_HEIGHT: int = 1080
+MAX_HEIGHT: int = 1440
 
 
 class LambdaEvent(TypedDict):

@@ -10,8 +10,9 @@ RUN dnf update -y && \
 COPY downsize_media/requirements.txt .
 RUN pip install --no-cache-dir -r ./requirements.txt
 
-COPY *.py ./lambdas/
+COPY __init__.py ./lambdas/
 
+COPY utils/*.py ./lambdas/utils/
 COPY downsize_media/lambda_function.py ./lambdas/downsize_media/lambda_function.py
 
 CMD ["lambdas.downsize_media.lambda_function.lambda_handler"]

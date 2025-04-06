@@ -26,7 +26,9 @@ ENTRYPOINT ["python3.11", "-m", "awslambdaric"]
 COPY extract_audio/requirements.txt .
 RUN pip3.11 install --no-cache-dir -r ./requirements.txt
 
-COPY *.py ./lambdas/
+COPY __init__.py ./lambdas/
+
+COPY utils/*.py ./lambdas/utils/
 COPY extract_audio/lambda_function.py ./lambdas/extract_audio/lambda_function.py
 
 CMD ["lambdas.extract_audio.lambda_function.lambda_handler"]

@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 class AbstractImage(ABC):
     def __init__(self, image: Any, image_format: ImageExtension) -> None:
         self.image = image
-        self.buffer: io.BytesIO | None = None
+        self.buffer: io.BytesIO = io.BytesIO()
         self.image_format: ImageExtension = image_format
 
     @abstractmethod
@@ -19,7 +19,6 @@ class AbstractImage(ABC):
         pass
 
     def save_image(self, s3_client: S3Client, bucket_name: str, key: str) -> str:
-        assert self.buffer is not None
         self.buffer.seek(0)
         s3_client.put_object(
             Body=self.buffer.getvalue(),
@@ -36,10 +35,8 @@ class ImagePillow(AbstractImage):
     ) -> None:
         from PIL import Image
 
-        with io.BytesIO() as buffer:
-            self.image = cast(Image.Image, self.image)
-            self.image.save(buffer, format=self.image_format.value)
-            self.buffer = buffer
+        self.image = cast(Image.Image, self.image)
+        self.image.save(self.buffer, format=self.image_format.value)
 
 
 class ImageCairo(AbstractImage):
@@ -48,10 +45,9 @@ class ImageCairo(AbstractImage):
     ) -> None:
         from cairo import ImageSurface
 
-        with io.BytesIO() as buffer:
-            self.image = cast(ImageSurface, self.image)
-            self.image_format = ImageExtension.PNG
-            self.image.write_to_png(buffer)
+        self.image = cast(ImageSurface, self.image)
+        self.image_format = ImageExtension.PNG
+        self.image.write_to_png(self.buffer)
 
 
 def save_video(

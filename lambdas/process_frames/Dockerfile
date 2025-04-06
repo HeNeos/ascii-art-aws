@@ -1,21 +1,38 @@
-FROM public.ecr.aws/lambda/python:3.12
+FROM public.ecr.aws/lambda/provided:al2023
 
 RUN dnf update -y && \
   dnf install -y \
-  python3-devel \
+  python3.11 \
+  python3.11-pip \
+  python3.11-devel \
   gcc \
   cairo \
   cairo-devel \
   pkgconfig \
-  gcc
+  git \
+  unzip \
+  xz \
+  wget \
+  tar
+
+RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
+  tar -xf ffmpeg-release-amd64-static.tar.xz --strip-components=1 -C /usr/local/bin && \
+  ln -sf /usr/local/bin/ffmpeg /usr/bin/ffmpeg && \
+  rm -f ffmpeg-release-amd64-static.tar.xz
+
+RUN pip3.11 install awslambdaric
+ENTRYPOINT ["python3.11", "-m", "awslambdaric"]
 
 COPY process_frames/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3.11 install --no-cache-dir -r requirements.txt
 
-COPY *.py ./lambdas/
+COPY __init__.py ./lambdas/
 
-COPY process_frames/consolas.ttf .
+COPY utils/*.py ./lambdas/utils/
+
+COPY process_frames/JetBrainsMonoNL-ExtraBold.ttf .
 COPY process_frames/lambda_function.py ./lambdas/process_frames/lambda_function.py
 COPY process_frames/modules ./lambdas/process_frames/modules
+COPY process_frames/dithering ./lambdas/process_frames/dithering
 
 CMD ["lambdas.process_frames.lambda_function.lambda_handler"]

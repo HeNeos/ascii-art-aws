@@ -188,7 +188,7 @@ resource "aws_lambda_function" "merge_frames" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_merge_frames}:latest"
   timeout       = 240
-  memory_size   = 10240
+  memory_size   = 8192
 
   ephemeral_storage {
     size = 4096
@@ -217,6 +217,7 @@ resource "aws_lambda_function" "process_frames" {
     variables = {
       ASCII_ART_BUCKET = var.ascii_art_bucket_name
       MEDIA_BUCKET     = var.media_bucket_name
+      NUMBA_CACHE_DIR  = "/tmp/__pycache__/"
     }
   }
 }

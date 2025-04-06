@@ -82,7 +82,7 @@ def resize_video(
         "-crf",
         f"{compression_level}",
         "-preset",
-        "medium",
+        "fast",
         output_path,
     ]
     subprocess.run(ffmpeg_command, check=True)
@@ -146,7 +146,7 @@ def merge_videos(video_files: list[str], output_path: str, crf: int = 22) -> Non
         "-crf",
         f"{crf}",
         "-preset",
-        "slow",
+        "faster",
         "-c:v",
         "libx264",
         "-c:a",
@@ -162,7 +162,7 @@ def merge_frames(
 ) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"
-    with open(concat_file, "w") as f:
+    with open(concat_file, "w+") as f:
         for frame_filename in frames_filename:
             path: str = str((pathlib.Path().joinpath(frame_filename)).resolve())
             f.write(f"file '{path}'\n")
@@ -191,7 +191,7 @@ def merge_frames(
         "-crf",
         f"{crf}",
         "-preset",
-        "slow",
+        "faster",
         output_path,
     ]
     subprocess.run(command, check=True)

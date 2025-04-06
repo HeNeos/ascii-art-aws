@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 from typing import TypedDict, cast
 
 import boto3
@@ -9,7 +10,6 @@ import numpy as np
 import numpy.typing as npt
 from cairo import ImageSurface
 from cv2.typing import MatLike
-from moviepy.editor import ImageSequenceClip
 from PIL import Image
 
 from lambdas.utils.custom_types import (
@@ -21,6 +21,7 @@ from lambdas.utils.custom_types import (
 )
 
 from lambdas.utils.font import Font
+from lambdas.utils.ffmpeg import merge_frames
 
 from lambdas.process_frames.modules.frames import FrameData, Frames
 from lambdas.process_frames.modules.ascii_dict import AsciiDict
@@ -123,7 +124,8 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
 
     if is_video:
         video_capture: cv2.VideoCapture = cv2.VideoCapture(local_file)
-        width, height = video_capture.get()  # TODO
+        width: int = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height: int = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         video_fps = video_capture.get(cv2.CAP_PROP_FPS)
         frames: Frames = extract_frames(video_capture, cast(VideoFile, media_file))
         video_capture.release()
@@ -144,29 +146,27 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
             )
             for frame in frames
         ]
+        frame_paths: list[str] = []
+        output_dir = os.path.join("/tmp", video_name)
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
+        for frame_id, ascii_frame in enumerate(ascii_frames):
+            frame_name: str = os.path.join(output_dir, f"{frame_id:04d}.png")
+            ascii_frame.write_to_png(frame_name)
+            frame_paths.append(frame_name)
         logger.info("Finish ascii-ed frames")
-        video = ImageSequenceClip(
-            [
-                np.ndarray(
-                    shape=(frame.get_height(), frame.get_width(), 4),
-                    dtype=np.uint8,
-                    buffer=frame.get_data(),
-                )[..., :3][:, :, ::-1]
-                for frame in ascii_frames
-            ],
-            fps=video_fps,
-        )
-        video.write_videofile(
-            "/tmp/temp-video.mp4",
-            temp_audiofile="/tmp/null-audio.mp3",
-            codec="libx264",
-            ffmpeg_params=["-g", "128", "-crf", "19", "-preset", "medium"],
+        video_path: str = f"/tmp/{video_name}.mp4"
+        merge_frames(
+            frames_filename=frame_paths,
+            frame_rate=video_fps,
+            output_path=video_path,
         )
         logger.info("Finish save local video")
         key = save_video(
             s3_client,
             ASCII_ART_BUCKET,
-            "/tmp/temp-video.mp4",
+            video_path,
             f"{video_name}-{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}",  # noqa: 501
         )
     else:
