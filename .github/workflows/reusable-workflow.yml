@@ -205,13 +205,9 @@ jobs:
           cd lambdas
           for function_name in "${!function_images[@]}"; do
               repo_name="${function_images[$function_name]}"
-              if git diff --quiet HEAD^ HEAD -- $function_name/requirement.txt $function_name/**/*.py $function_name/Dockerfile *.py; then
-                echo "No changes, skipping lambda function: $function_name"
-              else
-                (
-                  docker buildx build --platform linux/arm64 --provenance=false -t "$repo_name" --push -f "$function_name/Dockerfile" .
-                ) &
-              fi
+              (
+                docker buildx build --platform linux/arm64 --provenance=false -t "$repo_name" --push -f "$function_name/Dockerfile" .
+              ) &
           done
           wait
 
