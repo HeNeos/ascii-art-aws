@@ -202,6 +202,31 @@ jobs:
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_FRAMES }}"]="$image_repo_process_frames"
           )
 
+          max_retries=5
+          retry_count=0
+          retry_delay=20
+          while true; do
+            repository_failed=0
+            for function_name in "${!function_images[@]}"; do
+                repo_name="${function_images[$function_name]}"
+                aws ecr describe-repositories --repository-names "$repo_name" > /dev/null 2>&1
+                if [ $? -ne 0 ]; then
+                    echo "Repository $repo_name does not exist. Retrying..."
+                    repository_failed=$((repository_failed + 1))
+                fi
+            done
+            if [ $repository_failed -eq 0 ]; then
+                echo "All repositories exist. Proceeding with Docker build."
+                break
+            fi
+            retry_count=$((retry_count + 1))
+            retry_delay=$((retry_delay * 2))
+            if [ $retry_count -ge $max_retries ]; then
+                echo "Failed to describe repository after $max_retries attempts. Exiting."
+                exit 1
+            fi
+          done
+
           cd lambdas
           for function_name in "${!function_images[@]}"; do
               repo_name="${function_images[$function_name]}"
