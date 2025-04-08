@@ -61,8 +61,8 @@ resource "aws_iam_policy_attachment" "upload_lambda_policy_attachment" {
 
 data "archive_file" "upload_lambda" {
   type        = "zip"
-  source_file = "lambda_function.py"
-  output_path = "lambda_function_payload.zip"
+  source_file = "${path.module}/lambda_function.py"
+  output_path = "${path.module}/lambda_function_payload.zip"
 }
 
 
