@@ -29,6 +29,14 @@ class Event(TypedDict):
     isBase64Encoded: bool
 
 
+# 128 bytes to 16MB
+conditions = [
+    ["content-length-range", 1 << 7, 1 << 24],
+    ["starts-with", "$Content-Type", "image/"],
+    ["starts-with", "$Content-Type", "video/"],
+]
+
+
 def lambda_handler(event: Event, _: Any) -> Response:
     token = event.get("queryStringParameters", {}).get("uploadToken")
     if not token:
@@ -38,19 +46,25 @@ def lambda_handler(event: Event, _: Any) -> Response:
             "headers": {"Content-Type": "application/json"},
         }
 
-    # TODO: Fix to multiple file extensions and multiple names
-    object_key = f"raw/{token}.png"
+    key_prefix: str = f"raw/{token}/"
+    fields = {"key": key_prefix}
 
-    presigned_url = s3.generate_presigned_url(
-        "put_object",
-        Params={"Bucket": BUCKET, "Key": object_key, "ContentType": "image/png"},
+    presigned_post_data = s3.generate_presigned_post(
+        Bucket=BUCKET,
+        Key=key_prefix,
+        Fields=fields,
+        Conditions=conditions + [["starts-with", "$key", key_prefix]],
         ExpiresIn=300,
     )
 
     return {
         "statusCode": StatusCode.OK.value,
         "body": json.dumps(
-            {"uploadUrl": presigned_url, "s3Key": object_key, "jobId": token}
+            {
+                "uploadUrl": presigned_post_data["url"],
+                "jobId": token,
+                "fields": presigned_post_data["fields"],
+            },
         ),
         "headers": {"Content-Type": "application/json"},
     }

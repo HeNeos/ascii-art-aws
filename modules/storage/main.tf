@@ -6,6 +6,26 @@ resource "aws_s3_bucket" "media" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "media" {
+  depends_on = [aws_s3_bucket.media]
+  bucket     = aws_s3_bucket.media.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "media" {
+  depends_on = [aws_s3_bucket_versioning.media]
+  bucket     = aws_s3_bucket.media.id
+  rule {
+    id = "Delete old files"
+    expiration {
+      days = 1
+    }
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket" "audio" {
   bucket = "audio-bucket-${var.stage}-${var.account_id}"
 
@@ -28,7 +48,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "audio" {
   rule {
     id = "Delete old files"
     expiration {
-      days = 2
+      days = 1
     }
     status = "Enabled"
   }
@@ -56,7 +76,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "ascii_art" {
   rule {
     id = "Delete old files"
     expiration {
-      days = 5
+      days = 2
     }
     status = "Enabled"
   }
