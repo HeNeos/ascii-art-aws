@@ -36,7 +36,7 @@ class ImagePillow(AbstractImage):
         from PIL import Image
 
         self.image = cast(Image.Image, self.image)
-        self.image.save(self.buffer, format=self.image_format.value)
+        self.image.save(self.buffer, format=self.image_format.value, optimize=True)
 
 
 class ImageCairo(AbstractImage):
