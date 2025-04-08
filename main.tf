@@ -35,6 +35,15 @@ module "storage" {
   account_id = data.aws_caller_identity.current.account_id
 }
 
+module "api" {
+  source            = "./modules/api"
+  stage             = var.stage
+  region            = var.region
+  account_id        = data.aws_caller_identity.current.account_id
+  media_bucket_arn  = module.storage.media_bucket_arn
+  media_bucket_name = module.storage.media_bucket_name
+}
+
 module "sfn" {
   source                              = "./modules/sfn"
   stage                               = var.stage
@@ -55,3 +64,13 @@ module "sfn" {
   lambda_image_merge_frames           = var.lambda_image_merge_frames
   lambda_image_process_frames         = var.lambda_image_process_frames
 }
+
+# module "sqs" {
+#   source            = "./modules/sqs"
+#   stage             = var.stage
+#   region            = var.region
+#   account_id        = data.aws_caller_identity.current.account_id
+#   media_bucket_arn  = module.storage.media_bucket_arn
+#   media_bucket_name = module.storage.media_bucket_name
+#   step_function_arn = module.sfn.step_function_arn
+# }
