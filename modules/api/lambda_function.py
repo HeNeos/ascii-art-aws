@@ -32,8 +32,6 @@ class Event(TypedDict):
 # 128 bytes to 16MB
 conditions = [
     ["content-length-range", 1 << 7, 1 << 24],
-    ["starts-with", "$Content-Type", "image/"],
-    ["starts-with", "$Content-Type", "video/"],
 ]
 
 
@@ -45,15 +43,35 @@ def lambda_handler(event: Event, _: Any) -> Response:
             "body": "Missing uploadToken",
             "headers": {"Content-Type": "application/json"},
         }
+    body: dict[str, str] = json.loads(event.get("body", "{}"))
+    file_name: str = body.get("fileName", "")
+    content_type: str = body.get("contentType", "")
 
-    key_prefix: str = f"raw/{token}/"
-    fields = {"key": key_prefix}
+    if not file_name or not content_type:
+        return {
+            "statusCode": StatusCode.BAD_REQUEST.value,
+            "body": "Missing fileName or contentType",
+            "headers": {"Content-Type": "application/json"},
+        }
+    if not content_type.startswith("image/") and not content_type.startswith("video/"):
+        return {
+            "statusCode": StatusCode.BAD_REQUEST.value,
+            "body": "Invalid content type",
+            "headers": {"Content-Type": "application/json"},
+        }
+
+    key: str = f"raw/{token}/{file_name}"
+    fields = {"key": key}
 
     presigned_post_data = s3.generate_presigned_post(
         Bucket=BUCKET,
-        Key=key_prefix,
+        Key=key,
         Fields=fields,
-        Conditions=conditions + [["starts-with", "$key", key_prefix]],
+        Conditions=conditions
+        + [
+            ["starts-with", "$key", key],
+            ["starts-with", "$Content-Type", content_type],
+        ],
         ExpiresIn=300,
     )
 

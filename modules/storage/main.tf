@@ -14,6 +14,20 @@ resource "aws_s3_bucket_versioning" "media" {
   }
 }
 
+resource "aws_s3_bucket_cors_configuration" "media" {
+  bucket = aws_s3_bucket.media.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "HEAD"]
+    allowed_origins = [
+      "*" // TODO: fix it
+    ]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "media" {
   depends_on = [aws_s3_bucket_versioning.media]
   bucket     = aws_s3_bucket.media.id
