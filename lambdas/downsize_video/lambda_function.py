@@ -26,11 +26,10 @@ bucket_name: str = os.environ["MEDIA_BUCKET"]
 MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
 downsize_video_path: str | None = None
 
-DOWNSIZE_HEIGHT: int = MAX_HEIGHT // Font.Height.value
-
 
 class LambdaEvent(TypedDict):
     key: str
+    resolution: str
 
 
 @dataclass
@@ -106,18 +105,20 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     global downsize_video_path
     logger.info(event)
     file_path: str = event["key"]
+    resolution: int = min(int(event["resolution"]), MAX_HEIGHT)
 
     video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
 
     video_width, video_height = get_video_resolution(local_file)
-    new_width: int = int(video_width * MAX_HEIGHT / video_height)
+    new_width: int = int(video_width * resolution / video_height)
     if new_width % 2 == 1:
         new_width += 1
-    # if DOWNSIZE_HEIGHT % 2 == 1:
-    #     DOWNSIZE_HEIGHT += 1
+    if resolution % 2 == 1:
+        resolution += 1
+    downsize_height: int = resolution // Font.Height.value
     downsize_width: int = int(
-        DOWNSIZE_HEIGHT
+        downsize_height
         * video_width
         * (Font.Height.value / Font.Width.value)
         / video_height
@@ -129,7 +130,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     downsize_video_path = (
         f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}"
     )
-    resize_video(local_file, downsize_width, DOWNSIZE_HEIGHT, downsize_video_path)
+    resize_video(local_file, downsize_width, downsize_height, downsize_video_path)
 
     video_folder_name = (
         f"{video_file.random_id}/{video_file.file_name}/{video_file.file_name}"

@@ -368,7 +368,28 @@ resource "aws_sfn_state_machine" "step_function" {
           "is_image.$": "$.is_image"
         },
         "OutputPath": "$.output",
-        "Next": "IsVideo"
+        "Next": "GetProcessingParameters"
+      },
+      "GetProcessingParameters": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::dynamodb:getItem",
+        "Next": "IsVideo",
+        "ResultPath": "$.dynamoResult.Item",
+        "Parameters": {
+          "TableName": "${var.status_table_name}",
+          "Key": {
+            "id": {
+              "S.$": "$.random_id"
+            },
+            "status": {
+              "S": "PENDING"
+            }
+          }
+        },
+        "ResultSelector": {
+          "dithering.$": "$.dithering.S",
+          "resolution.$": "$.resolution.S"
+        }
       },
       "NotSupported": {
         "Type": "Fail",

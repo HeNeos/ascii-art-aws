@@ -1,7 +1,6 @@
 import logging
 import os
 from typing import TypedDict, cast
-from uuid import uuid4
 
 import boto3
 from mypy_boto3_s3.client import S3Client
@@ -23,12 +22,13 @@ MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
 class LambdaEvent(TypedDict):
     key: str
     bucket_name: str
+    resolution: str
 
 
-def rescale_image(image: Image.Image) -> Image.Image:
+def rescale_image(image: Image.Image, height_to_resize: int) -> Image.Image:
     width, height = image.size
 
-    resized_height: int = MAX_HEIGHT // Font.Height.value
+    resized_height: int = height_to_resize // Font.Height.value
     resized_width: int = int(
         resized_height * width * Font.Height.value / (Font.Width.value * height)
     )
@@ -41,11 +41,12 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     file_path: str = event["key"]
     bucket_name: str = event["bucket_name"]
+    resolution: int = min(int(event["resolution"]), MAX_HEIGHT)
 
     image_file: ImageFile = cast(ImageFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
     image: Image.Image = Image.open(local_file).convert("RGB")
-    resized_image = rescale_image(image)
+    resized_image = rescale_image(image, resolution)
     resized_image_name = f"{image_file.random_id}/{image_file.file_name}_resized.{image_file.extension.value}"
 
     image_object: ImagePillow = ImagePillow(resized_image, image_file.extension)

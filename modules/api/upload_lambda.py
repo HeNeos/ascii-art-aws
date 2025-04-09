@@ -7,6 +7,9 @@ from enum import Enum
 
 s3 = boto3.client("s3")
 BUCKET = os.environ["UPLOAD_BUCKET"]
+STATUS_TABLE = os.environ["STATUS_TABLE_NAME"]
+
+dynamo_client = boto3.client("dynamodb")
 
 
 class StatusCode(Enum):
@@ -34,13 +37,54 @@ conditions = [
     ["content-length-range", 1 << 7, 1 << 24],
 ]
 
+valid_resolutions: list[str] = [
+    "240p",
+    "360p",
+    "480p",
+    "720p",
+    "1080p",
+    "1440p",
+    "2160p",
+]
+
+valid_dithering: list[str] = [
+    "atkinson",
+    "riemersma",
+    "riemersma_naive",
+    "floyd_steinberg",
+    "jarvis_judice_ninke",
+]
+
+
+def check_parameters(
+    token: str | None,
+    dithering: str | None,
+    resolution: str | None,
+) -> str | None:
+    if not token:
+        return "Missing uploadToken"
+    if not dithering:
+        return "Missing dithering"
+    if not resolution:
+        return "Missing resolution"
+    if dithering not in valid_dithering:
+        return "Invalid dithering value"
+    if resolution not in valid_resolutions:
+        return "Invalid resolution value"
+    return None
+
 
 def lambda_handler(event: Event, _: Any) -> Response:
-    token = event.get("queryStringParameters", {}).get("uploadToken")
-    if not token:
+    token: str | None = event.get("queryStringParameters", {}).get("uploadToken")
+    dithering: str | None = event.get("queryStringParameters", {}).get("dithering")
+    resolution: str | None = event.get("queryStringParameters", {}).get("resolution")
+
+    error_message: str | None = check_parameters(token, dithering, resolution)
+
+    if error_message:
         return {
             "statusCode": StatusCode.BAD_REQUEST.value,
-            "body": "Missing uploadToken",
+            "body": error_message,
             "headers": {"Content-Type": "application/json"},
         }
     body: dict[str, str] = json.loads(event.get("body", "{}"))
@@ -73,6 +117,16 @@ def lambda_handler(event: Event, _: Any) -> Response:
             ["starts-with", "$Content-Type", content_type],
         ],
         ExpiresIn=300,
+    )
+
+    dynamo_client.put_item(
+        TableName=STATUS_TABLE,
+        Key={
+            "status": {"S": "PENDING"},
+            "id": {"S": token},
+            "dithering": {"S": dithering},
+            "resolution": {"S": resolution},
+        },
     )
 
     return {

@@ -90,7 +90,8 @@ resource "aws_lambda_function" "upload_lambda" {
 
   environment {
     variables = {
-      UPLOAD_BUCKET = var.media_bucket_name
+      UPLOAD_BUCKET     = var.media_bucket_name
+      STATUS_TABLE_NAME = aws_dynamodb_table.ascii_art.name
     }
   }
 }
