@@ -40,12 +40,12 @@ conditions = [
 
 valid_resolutions: list[str] = [
     "240",
-    "360",
     "480",
     "720",
     "1080",
     "1440",
     "2160",
+    "2880",
 ]
 
 valid_dithering: list[str] = [
