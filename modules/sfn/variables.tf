@@ -65,3 +65,11 @@ variable "audio_bucket_name" {
 variable "ascii_art_bucket_name" {
   type = string
 }
+
+variable "status_table_name" {
+  type = string
+}
+
+variable "status_table_arn" {
+  type = string
+}

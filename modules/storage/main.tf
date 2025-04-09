@@ -95,3 +95,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "ascii_art" {
     status = "Enabled"
   }
 }
+
+resource "aws_s3_bucket_cors_configuration" "ascii_art" {
+  bucket = aws_s3_bucket.ascii_art.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "HEAD"]
+    allowed_origins = [
+      "*" // TODO: fix it
+    ]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}

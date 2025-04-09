@@ -1,3 +1,4 @@
+import time
 import json
 import logging
 import os
@@ -14,10 +15,13 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 s3_client: S3Client = boto3.client("s3")
+dynamo_client = boto3.client("dynamodb")
+
 
 MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
 ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
 AUDIO_BUCKET: str = os.environ["AUDIO_BUCKET"]
+STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
 
 
 class LambdaEvent(TypedDict):
@@ -55,7 +59,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         s3_client,
         ASCII_ART_BUCKET,
         final_video_path,
-        f"{video_name}-{random_id}/{video_name}_ascii.{video_extension}",
+        f"{random_id}/{video_name}/{video_name}_ascii.{video_extension}",
     )
 
     url: str = s3_client.generate_presigned_url(
@@ -65,6 +69,16 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
             "Key": video_key,
         },
         ExpiresIn=300,
+    )
+
+    dynamo_client.put_item(
+        TableName=STATUS_TABLE_NAME,
+        Item={
+            "status": {"S": "FINISHED"},
+            "id": {"S": random_id},
+            "url": {"S": url},
+            "ttl": {"N": str(int(time.time() + 300))},
+        },
     )
 
     return {

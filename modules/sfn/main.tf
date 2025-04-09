@@ -28,8 +28,8 @@ resource "aws_iam_role" "lambda_role" {
   assume_role_policy = data.aws_iam_policy_document.lambda_policy_assume_role.json
 }
 
-resource "aws_iam_policy" "media_bucket" {
-  name = "media-bucket-policy-${var.stage}"
+resource "aws_iam_policy" "bucket" {
+  name = "bucket-policy-${var.stage}"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -47,15 +47,40 @@ resource "aws_iam_policy" "media_bucket" {
   })
 }
 
+resource "aws_iam_policy" "dynamo" {
+  name = "status-table-policy-${var.stage}"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+        ]
+        Resource = [var.status_table_arn]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_policy_attachment" "lambda_exec_attachment" {
   name       = "lambda-execution-policy-${var.stage}"
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
   roles      = [aws_iam_role.lambda_role.name]
 }
 
-resource "aws_iam_policy_attachment" "attach_media_bucket_policy" {
-  name       = "lambda-media-bucket-policy-${var.stage}"
-  policy_arn = aws_iam_policy.media_bucket.arn
+resource "aws_iam_policy_attachment" "attach_bucket_policy" {
+  name       = "lambda-bucket-policy-${var.stage}"
+  policy_arn = aws_iam_policy.bucket.arn
+  roles      = [aws_iam_role.lambda_role.name]
+}
+
+resource "aws_iam_policy_attachment" "attach_status_table_policy" {
+  name       = "lambda-status-table-policy-${var.stage}"
+  policy_arn = aws_iam_policy.dynamo.arn
   roles      = [aws_iam_role.lambda_role.name]
 }
 
@@ -202,9 +227,10 @@ resource "aws_lambda_function" "merge_frames" {
 
   environment {
     variables = {
-      ASCII_ART_BUCKET = var.ascii_art_bucket_name
-      MEDIA_BUCKET     = var.media_bucket_name
-      AUDIO_BUCKET     = var.audio_bucket_name
+      ASCII_ART_BUCKET  = var.ascii_art_bucket_name
+      MEDIA_BUCKET      = var.media_bucket_name
+      AUDIO_BUCKET      = var.audio_bucket_name
+      STATUS_TABLE_NAME = var.status_table_name
     }
   }
 }
@@ -226,6 +252,7 @@ resource "aws_lambda_function" "process_frames" {
       MEDIA_BUCKET      = var.media_bucket_name
       NUMBA_CACHE_DIR   = "/tmp/__pycache__/"
       DEFAULT_DITHERING = "atkinson"
+      STATUS_TABLE_NAME = var.status_table_name
     }
   }
 }

@@ -8,9 +8,22 @@ resource "aws_api_gateway_resource" "upload" {
   path_part   = "generate-upload-url"
 }
 
+resource "aws_api_gateway_resource" "poll" {
+  rest_api_id = aws_api_gateway_rest_api.ascii_api.id
+  parent_id   = aws_api_gateway_rest_api.ascii_api.root_resource_id
+  path_part   = "poll-ascii-art"
+}
+
 resource "aws_api_gateway_method" "upload_method" {
   rest_api_id   = aws_api_gateway_rest_api.ascii_api.id
   resource_id   = aws_api_gateway_resource.upload.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method" "poll_method" {
+  rest_api_id   = aws_api_gateway_rest_api.ascii_api.id
+  resource_id   = aws_api_gateway_resource.poll.id
   http_method   = "POST"
   authorization = "NONE"
 }
@@ -61,14 +74,14 @@ resource "aws_iam_policy_attachment" "upload_lambda_policy_attachment" {
 
 data "archive_file" "upload_lambda" {
   type        = "zip"
-  source_file = "${path.module}/lambda_function.py"
-  output_path = "${path.module}/lambda_function_payload.zip"
+  source_file = "${path.module}/upload_lambda.py"
+  output_path = "${path.module}/upload_lambda_payload.zip"
 }
 
 
 resource "aws_lambda_function" "upload_lambda" {
   function_name    = "upload_lambda-${var.stage}"
-  handler          = "lambda_function.lambda_handler"
+  handler          = "upload_lambda.lambda_handler"
   runtime          = "python3.12"
   role             = aws_iam_role.upload_lambda.arn
   source_code_hash = data.archive_file.upload_lambda.output_base64sha256
@@ -91,11 +104,121 @@ resource "aws_api_gateway_integration" "upload_lambda" {
   uri                     = aws_lambda_function.upload_lambda.invoke_arn
 }
 
-resource "aws_lambda_permission" "apigw_lambda" {
+resource "aws_lambda_permission" "apigw_upload_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.upload_lambda.function_name
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "arn:aws:execute-api:${var.region}:${var.account_id}:${aws_api_gateway_rest_api.ascii_api.id}/*/${aws_api_gateway_method.upload_method.http_method}${aws_api_gateway_resource.upload.path}"
+}
+
+resource "aws_dynamodb_table" "ascii_art" {
+  name           = "ascii_art_status-${var.stage}"
+  billing_mode   = "PROVISIONED"
+  write_capacity = 20
+  read_capacity  = 20
+
+  hash_key  = "status"
+  range_key = "id"
+
+  attribute {
+    name = "status"
+    type = "S"
+  }
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  ttl {
+    enabled        = true
+    attribute_name = "ttl"
+  }
+}
+
+data "aws_iam_policy_document" "poll_lambda_assume_role_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_policy" "poll_lambda_policy" {
+  name = "poll_lambda_policy-${var.stage}"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+        ]
+        Resource = aws_dynamodb_table.ascii_art.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:*"]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role" "poll_lambda" {
+  name               = "poll_lambda_role-${var.stage}"
+  assume_role_policy = data.aws_iam_policy_document.poll_lambda_assume_role_policy.json
+}
+
+resource "aws_iam_policy_attachment" "poll_lambda_policy_attachment" {
+  name       = "poll_lambda_policy_attachment-${var.stage}"
+  roles      = [aws_iam_role.poll_lambda.name]
+  policy_arn = aws_iam_policy.poll_lambda_policy.arn
+}
+
+data "archive_file" "poll_lambda" {
+  type        = "zip"
+  source_file = "${path.module}/poll_lambda.py"
+  output_path = "${path.module}/poll_lambda_payload.zip"
+}
+
+resource "aws_lambda_function" "poll_lambda" {
+  function_name    = "poll_lambda-${var.stage}"
+  handler          = "poll_lambda.lambda_handler"
+  runtime          = "python3.12"
+  role             = aws_iam_role.poll_lambda.arn
+  source_code_hash = data.archive_file.poll_lambda.output_base64sha256
+  filename         = data.archive_file.poll_lambda.output_path
+  timeout          = 5
+
+  environment {
+    variables = {
+      STATUS_TABLE_NAME = aws_dynamodb_table.ascii_art.name
+    }
+  }
+}
+
+
+resource "aws_api_gateway_integration" "poll_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.ascii_api.id
+  resource_id             = aws_api_gateway_resource.poll.id
+  http_method             = aws_api_gateway_method.poll_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.poll_lambda.invoke_arn
+}
+
+resource "aws_lambda_permission" "apigw_poll_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.poll_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "arn:aws:execute-api:${var.region}:${var.account_id}:${aws_api_gateway_rest_api.ascii_api.id}/*/${aws_api_gateway_method.poll_method.http_method}${aws_api_gateway_resource.poll.path}"
 }

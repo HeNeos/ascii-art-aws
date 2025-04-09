@@ -24,7 +24,7 @@ def find_media_type(file_path: str) -> MediaFile:
         if ImageExtension(file_extension) is ImageExtension.JPG:
             return ImageFile(file_name, ImageExtension.JPEG, random_id)
         else:
-            return ImageFile(file_name, ImageExtension(file_extension))
+            return ImageFile(file_name, ImageExtension(file_extension), random_id)
     if file_extension in VideoExtension._value2member_map_:
         return VideoFile(file_name, VideoExtension(file_extension), random_id)
 
