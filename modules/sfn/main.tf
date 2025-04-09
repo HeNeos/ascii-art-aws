@@ -368,28 +368,7 @@ resource "aws_sfn_state_machine" "step_function" {
           "is_image.$": "$.is_image"
         },
         "OutputPath": "$.output",
-        "Next": "GetProcessingParameters"
-      },
-      "GetProcessingParameters": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::dynamodb:getItem",
-        "Next": "IsVideo",
-        "ResultPath": "$.dynamoResult.Item",
-        "Parameters": {
-          "TableName": "${var.status_table_name}",
-          "Key": {
-            "id": {
-              "S.$": "$.random_id"
-            },
-            "status": {
-              "S": "PENDING"
-            }
-          }
-        },
-        "ResultSelector": {
-          "dithering.$": "$.dithering.S",
-          "resolution.$": "$.resolution.S"
-        }
+        "Next": "IsVideo"
       },
       "NotSupported": {
         "Type": "Fail",
@@ -415,12 +394,54 @@ resource "aws_sfn_state_machine" "step_function" {
       "DownsizeMedia": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.downsize_media.arn}",
-        "Next": "ProcessImage"
+        "Next": "GetImageProcessingParameters"
+      },
+      "GetImageProcessingParameters": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::dynamodb:getItem",
+        "Next": "ProcessImage",
+        "ResultPath": "$.dynamoResult.Item",
+        "Parameters": {
+          "TableName": "${var.status_table_name}",
+          "Key": {
+            "id": {
+              "S.$": "$.random_id"
+            },
+            "status": {
+              "S": "PENDING"
+            }
+          }
+        },
+        "ResultSelector": {
+          "dithering.$": "$.dithering.S",
+          "resolution.$": "$.resolution.S"
+        }
       },
       "DownsizeVideo": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.downsize_video.arn}",
-        "Next": "ProcessVideo"
+        "Next": "GetVideoProcessingParameters"
+      },
+      "GetVideoProcessingParameters": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::dynamodb:getItem",
+        "Next": "ProcessVideo",
+        "ResultPath": "$.dynamoResult.Item",
+        "Parameters": {
+          "TableName": "${var.status_table_name}",
+          "Key": {
+            "id": {
+              "S.$": "$.random_id"
+            },
+            "status": {
+              "S": "PENDING"
+            }
+          }
+        },
+        "ResultSelector": {
+          "dithering.$": "$.dithering.S",
+          "resolution.$": "$.resolution.S"
+        }
       },
       "ProcessVideo": {
         "Type": "Parallel",
