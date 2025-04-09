@@ -160,6 +160,7 @@ resource "aws_iam_policy" "poll_lambda_policy" {
         Action = [
           "dynamodb:GetItem",
           "dynamodb:Query",
+          "dynamodb:PutItem",
         ]
         Resource = aws_dynamodb_table.ascii_art.arn
       },

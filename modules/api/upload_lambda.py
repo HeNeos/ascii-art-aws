@@ -121,7 +121,7 @@ def lambda_handler(event: Event, _: Any) -> Response:
 
     dynamo_client.put_item(
         TableName=STATUS_TABLE,
-        Key={
+        Item={
             "status": {"S": "PENDING"},
             "id": {"S": token},
             "dithering": {"S": dithering},
