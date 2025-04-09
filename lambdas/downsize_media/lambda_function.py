@@ -41,15 +41,12 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     file_path: str = event["key"]
     bucket_name: str = event["bucket_name"]
-    random_id: str = uuid4().hex
 
     image_file: ImageFile = cast(ImageFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
     image: Image.Image = Image.open(local_file).convert("RGB")
     resized_image = rescale_image(image)
-    resized_image_name = (
-        f"{image_file.file_name}_resized-{random_id}.{image_file.extension.value}"
-    )
+    resized_image_name = f"{image_file.random_id}/{image_file.file_name}_resized.{image_file.extension.value}"
 
     image_object: ImagePillow = ImagePillow(resized_image, image_file.extension)
     image_object.write_to_buffer()
@@ -65,5 +62,5 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "is_image": True,
         "bucket_name": bucket_name,
         "processed_key": processed_key,
-        "random_id": random_id,
+        "random_id": image_file.random_id,
     }

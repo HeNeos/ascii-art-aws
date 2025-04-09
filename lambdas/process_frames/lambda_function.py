@@ -113,10 +113,9 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     logger.info(event)
 
     initial_key: str = event["key"]
-    video_name, _ = split_file_name(initial_key)
+    video_name, _, random_id = split_file_name(initial_key)
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
-    random_id: str = event["random_id"]
     dithering: str = event.get("dithering", DEFAULT_DITHERING)
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
@@ -168,7 +167,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
             s3_client,
             ASCII_ART_BUCKET,
             video_path,
-            f"{video_name}-{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}",  # noqa: 501
+            f"{random_id}/{video_name}/{media_file.file_name}_ascii.{media_file.extension.value}",  # noqa: 501
         )
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")

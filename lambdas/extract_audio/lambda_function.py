@@ -26,11 +26,10 @@ class LambdaEvent(TypedDict):
 def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     file_path: str = event["downsize_video"]
-    random_id: str = event["random_id"]
     video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
 
-    audio_file_name = f"{video_file.file_name}-{random_id}"
+    audio_file_name = f"{video_file.file_name}-{video_file.random_id}"
     audio_path: str = f"/tmp/{audio_file_name}.mp3"
     extract_audio(local_file, audio_path)
 
@@ -45,5 +44,5 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "key": event["key"],
         "audio_bucket": AUDIO_BUCKET,
         "audio_key": processed_key,
-        "random_id": random_id,
+        "random_id": video_file.random_id,
     }

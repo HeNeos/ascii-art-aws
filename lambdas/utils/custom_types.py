@@ -18,6 +18,7 @@ class ImageExtension(Enum):
 class ImageFile:
     file_name: str
     extension: ImageExtension
+    random_id: str
 
 
 class VideoExtension(Enum):
@@ -29,6 +30,7 @@ class VideoExtension(Enum):
 class VideoFile:
     file_name: str
     extension: VideoExtension
+    random_id: str
 
 
 MediaFile: TypeAlias = ImageFile | VideoFile

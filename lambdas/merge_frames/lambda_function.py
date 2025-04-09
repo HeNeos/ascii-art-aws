@@ -15,9 +15,9 @@ logger.setLevel(logging.INFO)
 
 s3_client: S3Client = boto3.client("s3")
 
-MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
-ASCII_ART_BUCKET = os.environ["ASCII_ART_BUCKET"]
-AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
+MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
+ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
+AUDIO_BUCKET: str = os.environ["AUDIO_BUCKET"]
 
 
 class LambdaEvent(TypedDict):
@@ -32,7 +32,6 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     initial_key: str = event["key"]
     audio_key: str = event["audio_key"]
     splitted_videos_key: list[str] = event["videos_key"]
-    random_id = event["random_id"]
     has_audio: bool = len(audio_key) > 0
 
     videos_local_path: list[str] = [
@@ -40,7 +39,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         for video_key in splitted_videos_key
     ]
 
-    video_name, video_extension = split_file_name(initial_key)
+    video_name, video_extension, random_id = split_file_name(initial_key)
 
     merged_video_path = f"/tmp/video_merged-{random_id}.{video_extension}"
     merge_videos(videos_local_path, merged_video_path)
