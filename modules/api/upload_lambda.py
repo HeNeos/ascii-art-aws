@@ -4,6 +4,7 @@ import boto3
 
 from typing import TypedDict, Any
 from enum import Enum
+from time import time
 
 s3 = boto3.client("s3")
 BUCKET = os.environ["UPLOAD_BUCKET"]
@@ -38,13 +39,13 @@ conditions = [
 ]
 
 valid_resolutions: list[str] = [
-    "240p",
-    "360p",
-    "480p",
-    "720p",
-    "1080p",
-    "1440p",
-    "2160p",
+    "240",
+    "360",
+    "480",
+    "720",
+    "1080",
+    "1440",
+    "2160",
 ]
 
 valid_dithering: list[str] = [
@@ -126,6 +127,7 @@ def lambda_handler(event: Event, _: Any) -> Response:
             "id": {"S": token},
             "dithering": {"S": dithering},
             "resolution": {"S": resolution},
+            "ttl": {"N": str(int(time() + 300))},
         },
     )
 

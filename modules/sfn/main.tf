@@ -132,8 +132,9 @@ resource "aws_lambda_function" "downsize_media" {
 
   environment {
     variables = {
-      MEDIA_BUCKET = var.media_bucket_name
-      MAX_HEIGHT   = "2160"
+      MEDIA_BUCKET      = var.media_bucket_name
+      STATUS_TABLE_NAME = var.status_table_name
+      MAX_HEIGHT        = "2160"
     }
   }
 }
@@ -189,8 +190,9 @@ resource "aws_lambda_function" "downsize_video" {
 
   environment {
     variables = {
-      MEDIA_BUCKET = var.media_bucket_name
-      MAX_HEIGHT   = "480"
+      MEDIA_BUCKET      = var.media_bucket_name
+      STATUS_TABLE_NAME = var.status_table_name
+      MAX_HEIGHT        = "480"
     }
   }
 }
@@ -394,54 +396,12 @@ resource "aws_sfn_state_machine" "step_function" {
       "DownsizeMedia": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.downsize_media.arn}",
-        "Next": "GetImageProcessingParameters"
-      },
-      "GetImageProcessingParameters": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::dynamodb:getItem",
-        "Next": "ProcessImage",
-        "ResultPath": "$.dynamoResult.Item",
-        "Parameters": {
-          "TableName": "${var.status_table_name}",
-          "Key": {
-            "id": {
-              "S.$": "$.random_id"
-            },
-            "status": {
-              "S": "PENDING"
-            }
-          }
-        },
-        "ResultSelector": {
-          "dithering.$": "$.dithering.S",
-          "resolution.$": "$.resolution.S"
-        }
+        "Next": "ProcessImage"
       },
       "DownsizeVideo": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.downsize_video.arn}",
-        "Next": "GetVideoProcessingParameters"
-      },
-      "GetVideoProcessingParameters": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::dynamodb:getItem",
-        "Next": "ProcessVideo",
-        "ResultPath": "$.dynamoResult.Item",
-        "Parameters": {
-          "TableName": "${var.status_table_name}",
-          "Key": {
-            "id": {
-              "S.$": "$.random_id"
-            },
-            "status": {
-              "S": "PENDING"
-            }
-          }
-        },
-        "ResultSelector": {
-          "dithering.$": "$.dithering.S",
-          "resolution.$": "$.resolution.S"
-        }
+        "Next": "ProcessVideo"
       },
       "ProcessVideo": {
         "Type": "Parallel",

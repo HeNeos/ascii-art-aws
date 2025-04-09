@@ -1,4 +1,3 @@
-import time
 import json
 import logging
 import os
@@ -9,6 +8,7 @@ import boto3
 import cv2
 import numpy as np
 import numpy.typing as npt
+from time import time
 from cairo import ImageSurface
 from cv2.typing import MatLike
 from PIL import Image
@@ -205,7 +205,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
                 "status": {"S": "FINISHED"},
                 "id": {"S": random_id},
                 "url": {"S": url},
-                "ttl": {"N": str(int(time.time() + 300))},
+                "ttl": {"N": str(int(time() + 300))},
             },
         )
         return {

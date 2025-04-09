@@ -15,8 +15,10 @@ from lambdas.utils.save import ImagePillow
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 s3_client: S3Client = boto3.client("s3")
+dynamo_client = boto3.client("dynamodb")
 
 MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
+STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
 
 
 class LambdaEvent(TypedDict):
@@ -41,11 +43,23 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
     file_path: str = event["key"]
     bucket_name: str = event["bucket_name"]
-    resolution: int = min(int(event["resolution"]), MAX_HEIGHT)
 
     image_file: ImageFile = cast(ImageFile, find_media_type(file_path))
+
+    response: dict | None = dynamo_client.get_item(
+        TableName=STATUS_TABLE_NAME,
+        Key={"id": {"S": image_file.random_id}, "status": {"S": "PENDING"}},
+    ).get("Item")
+
+    if response is None:
+        raise ValueError("No item found in DynamoDB")
+
+    resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
+    dithering: str = response["dithering"]["S"]
+
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
     image: Image.Image = Image.open(local_file).convert("RGB")
+
     resized_image = rescale_image(image, resolution)
     resized_image_name = f"{image_file.random_id}/{image_file.file_name}_resized.{image_file.extension.value}"
 
@@ -64,4 +78,6 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "bucket_name": bucket_name,
         "processed_key": processed_key,
         "random_id": image_file.random_id,
+        "dithering": dithering,
+        "resolution": resolution,
     }

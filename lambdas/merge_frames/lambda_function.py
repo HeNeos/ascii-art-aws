@@ -1,4 +1,3 @@
-import time
 import json
 import logging
 import os
@@ -6,6 +5,7 @@ from typing import TypedDict, cast
 
 import boto3
 from mypy_boto3_s3 import S3Client
+from time import time
 
 from lambdas.utils.ffmpeg import add_audio_to_video, merge_videos
 from lambdas.utils.utils import download_from_s3, split_file_name
@@ -77,7 +77,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
             "status": {"S": "FINISHED"},
             "id": {"S": random_id},
             "url": {"S": url},
-            "ttl": {"N": str(int(time.time() + 300))},
+            "ttl": {"N": str(int(time() + 300))},
         },
     )
 
