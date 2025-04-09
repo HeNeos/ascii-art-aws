@@ -14,7 +14,7 @@ variable "ecr_lifecycle_policy" {
             "description": "Keep last 2 images",
             "selection": {
                 "tagStatus": "tagged",
-                "tagPrefixList": ["v"],
+                "tagPrefixList": ["-"],
                 "countType": "imageCountMoreThan",
                 "countNumber": 2
             },
