@@ -21,7 +21,7 @@ resource "aws_s3_bucket_cors_configuration" "media" {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST", "HEAD"]
     allowed_origins = [
-      "*" // TODO: fix it
+      "https://v0-image-analysis-cyan-delta.vercel.app" // TODO: replace with valid origins
     ]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
@@ -101,10 +101,8 @@ resource "aws_s3_bucket_cors_configuration" "ascii_art" {
 
   cors_rule {
     allowed_headers = ["*"]
-    allowed_methods = ["GET", "PUT", "POST", "HEAD"]
-    allowed_origins = [
-      "*" // TODO: fix it
-    ]
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = ["*"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
