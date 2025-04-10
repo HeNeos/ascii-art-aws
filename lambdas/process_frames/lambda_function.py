@@ -21,15 +21,14 @@ from lambdas.utils.custom_types import (
     VideoFile,
 )
 
-from lambdas.utils.font import Font
 from lambdas.utils.ffmpeg import merge_frames
 
 from lambdas.process_frames.modules.frames import FrameData, Frames
-from lambdas.process_frames.modules.ascii_dict import AsciiDict
 from lambdas.process_frames.modules.utils import (
     create_ascii_image,
     create_char_array,
     map_to_char_vectorized,
+    get_ascii_dict,
 )
 from lambdas.process_frames.dithering import DitheringStrategy
 from lambdas.process_frames.dithering.utils import get_dithering_strategy
@@ -59,13 +58,14 @@ class LambdaEvent(TypedDict):
     is_video: bool
     random_id: str
     dithering: str
+    output: str
 
 
 def process_image(
     image: Image.Image,
     char_array: npt.NDArray[np.str_],
     dithering_strategy: type[DitheringStrategy] | None = None,
-) -> tuple[AsciiImage, AsciiColors]:
+) -> tuple[AsciiImage, AsciiColors, npt.NDArray[np.float64]]:
     img_array: npt.NDArray[np.uint8] = np.array(image, dtype=np.uint8)
 
     gray_array: npt.NDArray[np.float64] = np.clip(
@@ -80,18 +80,19 @@ def process_image(
     grid: AsciiImage = ascii_chars.tolist()
     image_colors: AsciiColors = [row.tolist() for row in img_array]
 
-    return grid, image_colors
+    return grid, image_colors, gray_array
 
 
 def ascii_convert(
     image: Image.Image,
     char_array: npt.NDArray[np.str_],
     dithering_strategy: type[DitheringStrategy] | None,
+    output: str,
 ) -> ImageSurface:
-    grid, image_colors = process_image(
+    grid, image_colors, gray_array = process_image(
         image=image, char_array=char_array, dithering_strategy=dithering_strategy
     )
-    return create_ascii_image(grid, image_colors)
+    return create_ascii_image(grid, image_colors, gray_array, output)
 
 
 def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> Frames:
@@ -120,6 +121,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
     dithering: str = event.get("dithering", DEFAULT_DITHERING)
+    output: str = event["output"]
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
     media_file: MediaFile = find_media_type(file_path)
@@ -133,11 +135,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         frames: Frames = extract_frames(video_capture, cast(VideoFile, media_file))
         video_capture.release()
         logger.info("Finish extract frames")
-        ascii_dict = (
-            AsciiDict.HighAsciiDict
-            if width * height >= (1600 // Font.Width.value) * (900 // Font.Height.value)
-            else AsciiDict.LowAsciiDict
-        )
+        ascii_dict = get_ascii_dict(width, height, output)
         char_array: npt.NDArray[np.str_] = create_char_array(ascii_dict)
         ascii_frames: list[ImageSurface] = [
             ascii_convert(
@@ -146,6 +144,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
                 ),
                 char_array,
                 dithering_strategy,
+                output,
             )
             for frame in frames
         ]
@@ -175,13 +174,10 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     else:
         image: Image.Image = Image.open(local_file).convert("RGB")
         width, height = image.size
-        ascii_dict = (
-            AsciiDict.HighAsciiDict
-            if width * height >= (1600 // Font.Width.value) * (900 // Font.Height.value)
-            else AsciiDict.LowAsciiDict
-        )
+        ascii_dict = get_ascii_dict(width, height, output)
+
         char_array = create_char_array(ascii_dict)
-        ascii_image = ascii_convert(image, char_array, dithering_strategy)
+        ascii_image = ascii_convert(image, char_array, dithering_strategy, output)
         image_object: ImageCairo = ImageCairo(
             ascii_image, ImageExtension(media_file.extension)
         )

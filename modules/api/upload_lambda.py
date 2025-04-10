@@ -79,6 +79,7 @@ def lambda_handler(event: Event, _: Any) -> Response:
     token: str | None = event.get("queryStringParameters", {}).get("uploadToken")
     dithering: str | None = event.get("queryStringParameters", {}).get("dithering")
     resolution: str | None = event.get("queryStringParameters", {}).get("resolution")
+    output: str = event.get("queryStringParameters", {}).get("output", "color")
 
     error_message: str | None = check_parameters(token, dithering, resolution)
 
@@ -128,6 +129,7 @@ def lambda_handler(event: Event, _: Any) -> Response:
             "dithering": {"S": dithering},
             "resolution": {"S": resolution},
             "ttl": {"N": str(int(time() + 300))},
+            "output": {"S": output},
         },
     )
 

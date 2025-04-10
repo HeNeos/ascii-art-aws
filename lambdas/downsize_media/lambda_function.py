@@ -24,7 +24,6 @@ STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
 class LambdaEvent(TypedDict):
     key: str
     bucket_name: str
-    resolution: str
 
 
 def rescale_image(image: Image.Image, height_to_resize: int) -> Image.Image:
@@ -56,6 +55,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
 
     resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
     dithering: str = response["dithering"]["S"]
+    output: str = response["output"]["S"]
 
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
     image: Image.Image = Image.open(local_file).convert("RGB")
@@ -80,4 +80,5 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "random_id": image_file.random_id,
         "dithering": dithering,
         "resolution": resolution,
+        "output": output,
     }

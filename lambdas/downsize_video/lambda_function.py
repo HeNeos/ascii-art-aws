@@ -122,6 +122,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
 
     resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
     dithering: str = response["dithering"]["S"]
+    output: str = response["dithering"]["S"]
 
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
 
@@ -169,4 +170,5 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "random_id": video_file.random_id,
         "dithering": dithering,
         "resolution": resolution,
+        "output": output,
     }

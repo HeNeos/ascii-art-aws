@@ -34,5 +34,6 @@ COPY process_frames/JetBrainsMonoNL-ExtraBold.ttf .
 COPY process_frames/lambda_function.py ./lambdas/process_frames/lambda_function.py
 COPY process_frames/modules ./lambdas/process_frames/modules
 COPY process_frames/dithering ./lambdas/process_frames/dithering
+COPY process_frames/canvas_context ./lambdas/process_frames/canvas_context
 
 CMD ["lambdas.process_frames.lambda_function.lambda_handler"]

@@ -7,10 +7,20 @@ import numpy.typing as npt
 
 from lambdas.utils.custom_types import AsciiColors, AsciiImage
 from lambdas.utils.font import Font
-from lambdas.process_frames.modules.ascii_dict import AsciiDict
+from lambdas.process_frames.modules.ascii_dict import AsciiDict, display_formats
+from lambdas.process_frames.canvas_context.cairo_context import CairoContextFactory
 
 _initialized: bool = False
 face: cairo.FontFace | None = None
+
+
+@no_type_check
+def get_ascii_dict(width: int, height: int, output: str) -> AsciiDict:
+    return (
+        display_formats[output].value.HighAsciiDict
+        if width * height >= (1600 // Font.Width.value) * (900 // Font.Height.value)
+        else display_formats[output].value.LowAsciiDict
+    )
 
 
 def create_char_array(ascii_dict: AsciiDict) -> npt.NDArray[np.str_]:
@@ -124,7 +134,10 @@ def create_cairo_font_face_for_file(
 
 
 def create_ascii_image(
-    ascii_art: AsciiImage, image_colors: AsciiColors
+    ascii_art: AsciiImage,
+    image_colors: AsciiColors,
+    gray_array: npt.NDArray[np.float64],
+    output: str,
 ) -> cairo.ImageSurface:
     global face
     rows = len(ascii_art)
@@ -134,12 +147,14 @@ def create_ascii_image(
     surface_height = int(Font.Height.value * rows)
 
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24, surface_width, surface_height)
-    context = cairo.Context(surface)
+    context = CairoContextFactory.create(display_formats[output], surface)
 
     if face is None:
         face = create_cairo_font_face_for_file(Font.Name.value, 0)
-    context.set_font_face(face)
-    context.set_font_size(Font.Size.value)
+    context.context.set_font_face(face)
+    context.context.set_font_size(Font.Size.value)
+    context.context.set_source_rgb(0, 0, 0)
+    context.context.paint()
 
     y = 0
     for row in range(rows):
@@ -147,9 +162,10 @@ def create_ascii_image(
         for column in range(columns):
             char = ascii_art[row][column]
             color = image_colors[row][column]
-            context.set_source_rgb(color[0] / 255, color[1] / 255, color[2] / 255)
-            context.move_to(x, y + Font.Height.value)
-            context.show_text(char)
+            luminance = gray_array[row][column]
+            context.set_color(color, luminance)
+            context.context.move_to(x, y + Font.Height.value)
+            context.context.show_text(char)
             x += Font.Width.value
         y += Font.Height.value
 
