@@ -28,7 +28,7 @@ class AsciiDictBlackWhite(Enum):
         + '"'
         + "~^=;!><+\\/*?crL)7T(|zJsviCltF1}{I3fY[]5nu2xjZoSyeaEPVhkU694KGwbdqOpXHAmRD#08WBM%N$Qg&@"  # noqa: E501
     )
-    HighAsciiDict = "    ``.':;*c7t3eK6ON&@"
+    HighAsciiDict = "  ``.':;*c7t3eK6O#&@"
     LowAsciiDict = "  `.':;*vx5K4&@"
 
 
@@ -41,7 +41,7 @@ class DisplayFormats(Enum):
 AsciiDict: TypeAlias = AsciiDictBlackWhite | AsciiDictColor | AsciiDictGrayScale
 
 display_formats: dict[str, DisplayFormats] = {
-    str(DisplayFormats.BLACK_AND_WHITE.value): DisplayFormats.BLACK_AND_WHITE,
-    str(DisplayFormats.COLOR.value): DisplayFormats.COLOR,
-    str(DisplayFormats.GRAY_SCALE.value): DisplayFormats.GRAY_SCALE,
+    DisplayFormats.BLACK_AND_WHITE.name: DisplayFormats.BLACK_AND_WHITE,
+    DisplayFormats.COLOR.name: DisplayFormats.COLOR,
+    DisplayFormats.GRAY_SCALE.name: DisplayFormats.GRAY_SCALE,
 }

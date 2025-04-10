@@ -127,11 +127,11 @@ jobs:
         id: get-ecr-repository
         run: |
           cd modules/ecr
-          echo "IMAGE_REPO_DOWNSIZE_MEDIA=$(terraform output -raw ecr_repo_downsize_media_url):latest" >> $GITHUB_OUTPUT
-          echo "IMAGE_REPO_DOWNSIZE_VIDEO=$(terraform output -raw ecr_repo_downsize_video_url):latest" >> $GITHUB_OUTPUT
-          echo "IMAGE_REPO_EXTRACT_AUDIO=$(terraform output -raw ecr_repo_extract_audio_url):latest" >> $GITHUB_OUTPUT
-          echo "IMAGE_REPO_MERGE_FRAMES=$(terraform output -raw ecr_repo_merge_frames_url):latest" >> $GITHUB_OUTPUT
-          echo "IMAGE_REPO_PROCESS_FRAMES=$(terraform output -raw ecr_repo_process_frames_url):latest" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_DOWNSIZE_MEDIA=$(terraform output -raw ecr_repo_downsize_media_url)" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_DOWNSIZE_VIDEO=$(terraform output -raw ecr_repo_downsize_video_url)" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_EXTRACT_AUDIO=$(terraform output -raw ecr_repo_extract_audio_url)" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_MERGE_FRAMES=$(terraform output -raw ecr_repo_merge_frames_url)" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_PROCESS_FRAMES=$(terraform output -raw ecr_repo_process_frames_url)" >> $GITHUB_OUTPUT
 
       - name: Save Outputs to Files
         run: |
@@ -206,7 +206,7 @@ jobs:
           for function_name in "${!function_images[@]}"; do
               repo_name="${function_images[$function_name]}"
               (
-                docker buildx build --platform linux/arm64 --provenance=false -t "$repo_name" --push -f "$function_name/Dockerfile" .
+                docker buildx build --platform linux/arm64 --provenance=false -t "$repo_name":latest -t "$repo_name":ascii-art --push -f "$function_name/Dockerfile" .
               ) &
           done
           wait
@@ -407,7 +407,7 @@ jobs:
               (
                 aws lambda update-function-code \
                   --function-name "$function_name-${{ inputs.stage }}" \
-                  --image-uri "$repo_name"
+                  --image-uri "$repo_name":latest
               ) &
           done
           wait
