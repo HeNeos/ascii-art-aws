@@ -23,3 +23,6 @@ jobs:
       AWS_BUCKET_KEY_NAME: ${{ secrets.AWS_BUCKET_KEY_NAME }}
       AWS_ROLE: ${{ secrets.AWS_ROLE }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

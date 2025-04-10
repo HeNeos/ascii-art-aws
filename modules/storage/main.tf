@@ -109,3 +109,27 @@ resource "aws_s3_bucket_cors_configuration" "ascii_art" {
     max_age_seconds = 3000
   }
 }
+
+resource "aws_s3_bucket" "r2_secrets" {
+  bucket = "r2-secrets-bucket-${var.stage}-${var.account_id}"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_s3_bucket_versioning" "r2_secrets" {
+  depends_on = [aws_s3_bucket.r2_secrets]
+  bucket     = aws_s3_bucket.r2_secrets.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_object" "r2_secrets" {
+  bucket                 = aws_s3_bucket.r2_secrets.id
+  key                    = "r2_secrets.json"
+  source                 = "r2_secrets.json"
+  server_side_encryption = "AES256"
+  etag                   = filemd5("r2_secrets.json")
+}
