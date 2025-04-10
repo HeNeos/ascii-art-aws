@@ -11,12 +11,12 @@ variable "ecr_lifecycle_policy" {
     "rules": [
         {
             "rulePriority": 1,
-            "description": "Keep last 2 images",
+            "description": "Keep last 1 image",
             "selection": {
                 "tagStatus": "tagged",
                 "tagPrefixList": ["v"],
                 "countType": "imageCountMoreThan",
-                "countNumber": 2
+                "countNumber": 1
             },
             "action": {
                 "type": "expire"
