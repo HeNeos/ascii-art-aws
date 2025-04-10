@@ -54,6 +54,10 @@ variable "ascii_art_bucket_arn" {
   type = string
 }
 
+variable "r2_secrets_bucket_arn" {
+  type = string
+}
+
 variable "media_bucket_name" {
   type = string
 }
@@ -63,6 +67,10 @@ variable "audio_bucket_name" {
 }
 
 variable "ascii_art_bucket_name" {
+  type = string
+}
+
+variable "r2_secrets_bucket_name" {
   type = string
 }
 

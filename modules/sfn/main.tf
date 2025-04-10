@@ -34,9 +34,18 @@ resource "aws_iam_policy" "bucket" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow",
-        Action   = ["s3:Get*", "s3:List*", "s3:Describe*"],
-        Resource = ["${var.media_bucket_arn}", "${var.media_bucket_arn}/*", "${var.audio_bucket_arn}", "${var.audio_bucket_arn}/*", "${var.ascii_art_bucket_arn}", "${var.ascii_art_bucket_arn}/*"]
+        Effect = "Allow",
+        Action = ["s3:Get*", "s3:List*", "s3:Describe*"],
+        Resource = [
+          "${var.media_bucket_arn}",
+          "${var.media_bucket_arn}/*",
+          "${var.audio_bucket_arn}",
+          "${var.audio_bucket_arn}/*",
+          "${var.ascii_art_bucket_arn}",
+          "${var.ascii_art_bucket_arn}/*",
+          "${var.r2_secrets_bucket_arn}",
+          "${var.r2_secrets_bucket_arn}/*"
+        ]
       },
       {
         Effect   = "Allow",
@@ -232,6 +241,7 @@ resource "aws_lambda_function" "merge_frames" {
       ASCII_ART_BUCKET  = var.ascii_art_bucket_name
       MEDIA_BUCKET      = var.media_bucket_name
       AUDIO_BUCKET      = var.audio_bucket_name
+      R2_SECRETS_BUCKET = var.r2_secrets_bucket_name
       STATUS_TABLE_NAME = var.status_table_name
     }
   }
@@ -252,6 +262,7 @@ resource "aws_lambda_function" "process_frames" {
     variables = {
       ASCII_ART_BUCKET  = var.ascii_art_bucket_name
       MEDIA_BUCKET      = var.media_bucket_name
+      R2_SECRETS_BUCKET = var.r2_secrets_bucket_name
       NUMBA_CACHE_DIR   = "/tmp/__pycache__/"
       DEFAULT_DITHERING = "atkinson"
       STATUS_TABLE_NAME = var.status_table_name
