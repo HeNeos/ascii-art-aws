@@ -1,4 +1,5 @@
-FROM public.ecr.aws/lambda/provided:al2023
+# Stage 1: Build stage
+FROM public.ecr.aws/lambda/provided:al2023 as builder
 
 RUN dnf update -y && \
   dnf install -y \
@@ -6,30 +7,35 @@ RUN dnf update -y && \
   python3.11-pip \
   python3.11-devel \
   gcc \
-  cairo \
   cairo-devel \
-  pkgconfig \
-  git \
-  unzip \
-  xz \
   wget \
-  tar
+  xz \
+  tar \
+  && dnf clean all
 
 RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz && \
   tar -xf ffmpeg-release-arm64-static.tar.xz --strip-components=1 -C /usr/local/bin && \
-  ln -sf /usr/local/bin/ffmpeg /usr/bin/ffmpeg && \
-  rm -f ffmpeg-release-arm64-static.tar.xz
-
-RUN pip3.11 install awslambdaric
-ENTRYPOINT ["python3.11", "-m", "awslambdaric"]
+  rm ffmpeg-release-arm64-static.tar.xz
 
 COPY process_image/requirements.txt .
-RUN pip3.11 install --no-cache-dir -r requirements.txt
+RUN pip3.11 install --no-cache-dir --target /deps awslambdaric -r requirements.txt
+
+# Stage 2: Final image
+FROM public.ecr.aws/lambda/provided:al2023
+
+RUN dnf update -y && \
+  dnf install -y \
+  python3.11 \
+  cairo \
+  && dnf clean all
+
+COPY --from=builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+COPY --from=builder /deps /usr/local/lib/python3.11/site-packages
 
 COPY __init__.py ./lambdas/
 COPY utils/*.py ./lambdas/utils/
-
 COPY process_image/lambda_function.py ./lambdas/process_image/lambda_function.py
 COPY process ./lambdas/process
 
+ENTRYPOINT ["python3.11", "-m", "awslambdaric"]
 CMD ["lambdas.process_image.lambda_function.lambda_handler"]
