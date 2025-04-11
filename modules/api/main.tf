@@ -271,3 +271,12 @@ resource "aws_api_gateway_method_settings" "poll_settings" {
     cache_ttl_in_seconds   = 600
   }
 }
+
+resource "aws_cloudwatch_log_group" "lambdas_log_group" {
+  for_each = tomap({
+    "poll_lambda"   = aws_lambda_function.poll_lambda.function_name
+    "upload_lambda" = aws_lambda_function.upload_lambda.function_name
+  })
+  name              = "/aws/lambda/${each.value}"
+  retention_in_days = 7
+}

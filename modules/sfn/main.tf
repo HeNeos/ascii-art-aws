@@ -293,6 +293,19 @@ resource "aws_lambda_function" "process_image" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "lambdas_log_group" {
+  for_each = tomap({
+    "downsize_media" = aws_lambda_function.downsize_media.function_name
+    "downsize_video" = aws_lambda_function.downsize_video.function_name
+    "extract_audio"  = aws_lambda_function.extract_audio.function_name
+    "merge_frames"   = aws_lambda_function.merge_frames.function_name
+    "process_frames" = aws_lambda_function.process_frames.function_name
+    "process_image"  = aws_lambda_function.process_image.function_name
+  })
+  name              = "/aws/lambda/${each.value}"
+  retention_in_days = 7
+}
+
 
 resource "aws_sfn_state_machine" "step_function" {
   name     = "AsciiArt-${var.stage}"
