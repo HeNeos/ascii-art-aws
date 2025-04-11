@@ -13,7 +13,7 @@
 
 |Original|Ascii|
 |--------|-----|
-|<video src="https://github.com/user-attachments/assets/e923b3fa-91c2-4db0-8383-d81248b31a35">| <video src="https://github.com/user-attachments/assets/d936ac64-3e26-498e-a82b-785c5cdcd8ad"></video> |
+|<video src="https://github.com/user-attachments/assets/e923b3fa-91c2-4db0-8383-d81248b31a35">| <video src="https://github.com/user-attachments/assets/1d0f615d-104a-47c7-bc78-c5a5f2394c22"></video> |
 
 
 ## Description
