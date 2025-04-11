@@ -36,7 +36,7 @@ with Diagram("Ascii Art", show=False, direction="LR"):
     downsize_media = Lambda("DownsizeMedia")
     downsize_video = Lambda("DownsizeVideo")
     extract_audio = Lambda("ExtractAudio")
-    process_frames = Lambda("ProcessFrames")
+    process_image = Lambda("ProcessImage")
     merge_frames = Lambda("MergeFrames")
 
     with Cluster("Processing"):
@@ -44,7 +44,7 @@ with Diagram("Ascii Art", show=False, direction="LR"):
             downsize_media,
             downsize_video,
             extract_audio,
-            process_frames,
+            process_image,
             merge_frames,
         ]
         with Cluster("MapProcessFrames"):
@@ -54,10 +54,10 @@ with Diagram("Ascii Art", show=False, direction="LR"):
     (
         step_function
         >> downsize_media
-        >> process_frames
+        >> process_image
         >> [state_table, ascii_art_bucket]
     )
-    downsize_media >> media_bucket >> process_frames
+    downsize_media >> media_bucket >> process_image
     (
         step_function
         >> downsize_video
@@ -69,4 +69,4 @@ with Diagram("Ascii Art", show=False, direction="LR"):
     lambda_process_frames >> ascii_art_bucket
     merge_frames >> [state_table, ascii_art_bucket]
 
-    ascii_art_bucket >> [merge_frames, process_frames]
+    ascii_art_bucket >> [merge_frames, process_image]
