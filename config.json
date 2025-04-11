@@ -4,7 +4,8 @@
     "function_name_downsize_video": "downsize_video",
     "function_name_extract_audio": "extract_audio",
     "function_name_merge_frames": "merge_frames",
-    "function_name_process_frames": "process_frames"
+    "function_name_process_frames": "process_frames",
+    "function_name_process_image": "process_image"
   }
 }
 

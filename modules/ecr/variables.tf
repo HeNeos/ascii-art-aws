@@ -18,6 +18,10 @@ variable "lambda_function_name_process_frames" {
   type = string
 }
 
+variable "lambda_function_name_process_image" {
+  type = string
+}
+
 variable "region" {
   type    = string
   default = "us-east-1"

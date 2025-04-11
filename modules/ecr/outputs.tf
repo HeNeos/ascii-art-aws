@@ -17,3 +17,7 @@ output "ecr_repo_merge_frames_url" {
 output "ecr_repo_process_frames_url" {
   value = aws_ecr_repository.process_frames.repository_url
 }
+
+output "ecr_repo_process_image_url" {
+  value = aws_ecr_repository.process_image.repository_url
+}

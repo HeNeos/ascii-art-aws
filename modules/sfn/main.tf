@@ -270,6 +270,29 @@ resource "aws_lambda_function" "process_frames" {
   }
 }
 
+resource "aws_lambda_function" "process_image" {
+  function_name = var.lambda_function_name_process_image
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
+  image_uri     = "${var.lambda_image_process_image}:latest"
+  timeout       = 90
+  memory_size   = 3008
+  architectures = ["arm64"]
+  ephemeral_storage {
+    size = 2048
+  }
+  environment {
+    variables = {
+      ASCII_ART_BUCKET  = var.ascii_art_bucket_name
+      MEDIA_BUCKET      = var.media_bucket_name
+      R2_SECRETS_BUCKET = var.r2_secrets_bucket_name
+      NUMBA_CACHE_DIR   = "/tmp/__pycache__/"
+      DEFAULT_DITHERING = "atkinson"
+      STATUS_TABLE_NAME = var.status_table_name
+    }
+  }
+}
+
 
 resource "aws_sfn_state_machine" "step_function" {
   name     = "AsciiArt-${var.stage}"
@@ -474,7 +497,7 @@ resource "aws_sfn_state_machine" "step_function" {
       },
       "ProcessImage": {
         "Type": "Task",
-        "Resource": "${aws_lambda_function.process_frames.arn}",
+        "Resource": "${aws_lambda_function.process_image.arn}",
         "End": true
       },
       "CombineOutputs": {

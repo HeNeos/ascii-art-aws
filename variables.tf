@@ -28,3 +28,7 @@ variable "lambda_image_merge_frames" {
 variable "lambda_image_process_frames" {
   type = string
 }
+
+variable "lambda_image_process_image" {
+  type = string
+}

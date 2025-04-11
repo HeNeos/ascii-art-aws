@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from cairo import Context, ImageSurface
 
-from lambdas.process_frames.modules.ascii_dict import DisplayFormats
+from lambdas.process.ascii_dict import DisplayFormats
 from lambdas.utils.custom_types import Color
 
 

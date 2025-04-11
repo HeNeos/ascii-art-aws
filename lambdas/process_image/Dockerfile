@@ -23,14 +23,13 @@ RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.t
 RUN pip3.11 install awslambdaric
 ENTRYPOINT ["python3.11", "-m", "awslambdaric"]
 
-COPY process_frames/requirements.txt .
+COPY process_image/requirements.txt .
 RUN pip3.11 install --no-cache-dir -r requirements.txt
 
 COPY __init__.py ./lambdas/
 COPY utils/*.py ./lambdas/utils/
 
-COPY process_frames/lambda_function.py ./lambdas/process_frames/lambda_function.py
-COPY process_frames/modules ./lambdas/process_frames/modules
+COPY process_image/lambda_function.py ./lambdas/process_image/lambda_function.py
 COPY process ./lambdas/process
 
-CMD ["lambdas.process_frames.lambda_function.lambda_handler"]
+CMD ["lambdas.process_image.lambda_function.lambda_handler"]

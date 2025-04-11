@@ -26,6 +26,7 @@ locals {
   function_name_extract_audio  = local.config.lambda.function_name_extract_audio
   function_name_merge_frames   = local.config.lambda.function_name_merge_frames
   function_name_process_frames = local.config.lambda.function_name_process_frames
+  function_name_process_image  = local.config.lambda.function_name_process_image
 }
 
 module "storage" {
@@ -62,11 +63,13 @@ module "sfn" {
   lambda_function_name_extract_audio  = "${local.function_name_extract_audio}-${var.stage}"
   lambda_function_name_merge_frames   = "${local.function_name_merge_frames}-${var.stage}"
   lambda_function_name_process_frames = "${local.function_name_process_frames}-${var.stage}"
+  lambda_function_name_process_image  = "${local.function_name_process_image}-${var.stage}"
   lambda_image_downsize_media         = var.lambda_image_downsize_media
   lambda_image_downsize_video         = var.lambda_image_downsize_video
   lambda_image_extract_audio          = var.lambda_image_extract_audio
   lambda_image_merge_frames           = var.lambda_image_merge_frames
   lambda_image_process_frames         = var.lambda_image_process_frames
+  lambda_image_process_image          = var.lambda_image_process_image
 }
 
 # module "sqs" {

@@ -43,16 +43,19 @@ jobs:
       IMAGE_REPO_EXTRACT_AUDIO: ${{ steps.get-ecr-repository.outputs.IMAGE_REPO_EXTRACT_AUDIO }}
       IMAGE_REPO_MERGE_FRAMES: ${{ steps.get-ecr-repository.outputs.IMAGE_REPO_MERGE_FRAMES }}
       IMAGE_REPO_PROCESS_FRAMES: ${{ steps.get-ecr-repository.outputs.IMAGE_REPO_PROCESS_FRAMES }}
+      IMAGE_REPO_PROCESS_IMAGE: ${{ steps.get-ecr-repository.outputs.IMAGE_REPO_PROCESS_IMAGE }}
       FUNCTION_NAME_DOWNSIZE_MEDIA: ${{ steps.parse-config.outputs.FUNCTION_NAME_DOWNSIZE_MEDIA }}
       FUNCTION_NAME_DOWNSIZE_VIDEO: ${{ steps.parse-config.outputs.FUNCTION_NAME_DOWNSIZE_VIDEO }}
       FUNCTION_NAME_EXTRACT_AUDIO: ${{ steps.parse-config.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}
       FUNCTION_NAME_MERGE_FRAMES: ${{ steps.parse-config.outputs.FUNCTION_NAME_MERGE_FRAMES }}
       FUNCTION_NAME_PROCESS_FRAMES: ${{ steps.parse-config.outputs.FUNCTION_NAME_PROCESS_FRAMES }}
+      FUNCTION_NAME_PROCESS_IMAGE: ${{ steps.parse-config.outputs.FUNCTION_NAME_PROCESS_IMAGE }}
       LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}
       LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}
       LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}
       LAMBDA_FUNCTION_NAME_MERGE_FRAMES: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}
       LAMBDA_FUNCTION_NAME_PROCESS_FRAMES: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}
+      LAMBDA_FUNCTION_NAME_PROCESS_IMAGE: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}
       BASE_REPO_URI: ${{ steps.deploy-ecr.outputs.BASE_REPO_URI }}
     defaults:
       run:
@@ -86,18 +89,21 @@ jobs:
           function_name_extract_audio=$(jq -r '.lambda.function_name_extract_audio' config.json)
           function_name_merge_frames=$(jq -r '.lambda.function_name_merge_frames' config.json)
           function_name_process_frames=$(jq -r '.lambda.function_name_process_frames' config.json)
+          function_name_process_image=$(jq -r '.lambda.function_name_process_image' config.json)
 
           echo "FUNCTION_NAME_DOWNSIZE_MEDIA=${function_name_downsize_media}" >> $GITHUB_OUTPUT
           echo "FUNCTION_NAME_DOWNSIZE_VIDEO=${function_name_downsize_video}" >> $GITHUB_OUTPUT
           echo "FUNCTION_NAME_EXTRACT_AUDIO=${function_name_extract_audio}" >> $GITHUB_OUTPUT
           echo "FUNCTION_NAME_MERGE_FRAMES=${function_name_merge_frames}" >> $GITHUB_OUTPUT
           echo "FUNCTION_NAME_PROCESS_FRAMES=${function_name_process_frames}" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME_PROCESS_IMAGE=${function_name_process_image}" >> $GITHUB_OUTPUT
 
           echo "LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA=${function_name_downsize_media}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
           echo "LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO=${function_name_downsize_video}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
           echo "LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO=${function_name_extract_audio}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
           echo "LAMBDA_FUNCTION_NAME_MERGE_FRAMES=${function_name_merge_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
           echo "LAMBDA_FUNCTION_NAME_PROCESS_FRAMES=${function_name_process_frames}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
+          echo "LAMBDA_FUNCTION_NAME_PROCESS_IMAGE=${function_name_process_image}-${{ inputs.stage }}" >> $GITHUB_OUTPUT
 
       - name: Deploy ECR
         id: deploy-ecr
@@ -117,6 +123,7 @@ jobs:
             -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
             -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
             -var="lambda_function_name_process_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
+            -var="lambda_function_name_process_image=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
             -no-color
 
           terraform apply \
@@ -127,6 +134,7 @@ jobs:
             -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
             -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
             -var="lambda_function_name_process_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
+            -var="lambda_function_name_process_image=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
             -auto-approve -input=false
 
       - name: Get ECR Repository URIs
@@ -138,6 +146,7 @@ jobs:
           echo "IMAGE_REPO_EXTRACT_AUDIO=$(terraform output -raw ecr_repo_extract_audio_url)" >> $GITHUB_OUTPUT
           echo "IMAGE_REPO_MERGE_FRAMES=$(terraform output -raw ecr_repo_merge_frames_url)" >> $GITHUB_OUTPUT
           echo "IMAGE_REPO_PROCESS_FRAMES=$(terraform output -raw ecr_repo_process_frames_url)" >> $GITHUB_OUTPUT
+          echo "IMAGE_REPO_PROCESS_IMAGE=$(terraform output -raw ecr_repo_process_image_url)" >> $GITHUB_OUTPUT
 
       - name: Save Outputs to Files
         run: |
@@ -147,6 +156,7 @@ jobs:
           echo "${{ steps.get-ecr-repository.outputs.IMAGE_REPO_EXTRACT_AUDIO }}" > image_repo_extract_audio.txt
           echo "${{ steps.get-ecr-repository.outputs.IMAGE_REPO_MERGE_FRAMES }}" > image_repo_merge_frames.txt
           echo "${{ steps.get-ecr-repository.outputs.IMAGE_REPO_PROCESS_FRAMES }}" > image_repo_process_frames.txt
+          echo "${{ steps.get-ecr-repository.outputs.IMAGE_REPO_PROCESS_IMAGE }}" > image_repo_process_image.txt
 
       - name: Create R2 Secrets JSON
         run: |
@@ -171,6 +181,7 @@ jobs:
             image_repo_extract_audio.txt
             image_repo_merge_frames.txt
             image_repo_process_frames.txt
+            image_repo_process_image.txt
             r2_secrets.json
           retention-days: 1
 
@@ -211,6 +222,7 @@ jobs:
           image_repo_extract_audio=$(cat image_repo_extract_audio.txt)
           image_repo_merge_frames=$(cat image_repo_merge_frames.txt)
           image_repo_process_frames=$(cat image_repo_process_frames.txt)
+          image_repo_process_image=$(cat image_repo_process_image.txt)
 
           declare -A function_images
           function_images=(
@@ -219,6 +231,7 @@ jobs:
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="$image_repo_extract_audio"
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="$image_repo_merge_frames"
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_FRAMES }}"]="$image_repo_process_frames"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_IMAGE }}"]="$image_repo_process_image"
           )
 
           cd lambdas
@@ -281,6 +294,7 @@ jobs:
             -var="lambda_image_extract_audio=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
             -var="lambda_image_merge_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
             -var="lambda_image_process_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
+            -var="lambda_image_process_image=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
             -var-file=r2_secrets.json \
             -no-color
         continue-on-error: true
@@ -362,6 +376,7 @@ jobs:
             -var="lambda_image_extract_audio=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
             -var="lambda_image_merge_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
             -var="lambda_image_process_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
+            -var="lambda_image_process_image=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
             -var-file=r2_secrets.json \
             -auto-approve -input=false
 
@@ -376,6 +391,7 @@ jobs:
             -var="lambda_image_extract_audio=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
             -var="lambda_image_merge_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
             -var="lambda_image_process_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
+            -var="lambda_image_process_image=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
             -var-file=r2_secrets.json \
             -auto-approve -input=false
 
@@ -415,6 +431,7 @@ jobs:
           image_repo_extract_audio=$(cat image_repo_extract_audio.txt)
           image_repo_merge_frames=$(cat image_repo_merge_frames.txt)
           image_repo_process_frames=$(cat image_repo_process_frames.txt)
+          image_repo_process_image=$(cat image_repo_process_image.txt)
 
           declare -A function_images
           function_images=(
@@ -423,6 +440,7 @@ jobs:
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_EXTRACT_AUDIO }}"]="$image_repo_extract_audio"
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_MERGE_FRAMES }}"]="$image_repo_merge_frames"
               ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_FRAMES }}"]="$image_repo_process_frames"
+              ["${{ needs.deploy_ecr.outputs.FUNCTION_NAME_PROCESS_IMAGE }}"]="$image_repo_process_image"
           )
 
           for function_name in "${!function_images[@]}"; do

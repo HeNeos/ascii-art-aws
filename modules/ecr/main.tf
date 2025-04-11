@@ -71,3 +71,12 @@ resource "aws_ecr_lifecycle_policy" "process_frames" {
   repository = aws_ecr_repository.process_frames.name
   policy     = var.ecr_lifecycle_policy
 }
+
+resource "aws_ecr_repository" "process_image" {
+  name = var.lambda_function_name_process_image
+}
+
+resource "aws_ecr_lifecycle_policy" "process_image" {
+  repository = aws_ecr_repository.process_image.name
+  policy     = var.ecr_lifecycle_policy
+}
