@@ -126,7 +126,6 @@ def extract_frames(video_capture: cv2.VideoCapture, video_file: VideoFile) -> Fr
 def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     logger.info(event)
     global r2_credentials
-    global r2_client
 
     if r2_credentials is None:
         r2_credentials = get_r2_credentials(s3_client, R2_SECRETS_BUCKET)
@@ -136,7 +135,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     file_path: str = event["processed_key"]
     is_video: bool = event["is_video"]
     dithering: str = event.get("dithering", DEFAULT_DITHERING)
-    output: str = event["output"]
+    output: str = event.get("output", "COLOR")
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
     media_file: MediaFile = find_media_type(file_path)
