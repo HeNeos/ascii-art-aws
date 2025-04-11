@@ -2,13 +2,13 @@
 
 ## Architecture diagram
 
-![architecture diagram](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/ascii_art.drawio.png)
+![architecture diagram](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/dev/ascii_art.drawio.png)
 
 ## Examples
 
 |Original|Ascii|
 |--------|-----|
-|![jaden_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1.PNG)|![jaden_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1_resized-ae5b6be6b02d4802abe229e1f1450742_ascii.png)|
+|![jaden_original](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/main/assets/jaden_1.PNG)|![jaden_ascii](https://raw.githubusercontent.com/HeNeos/ascii-art-aws/dev/assets/jaden_1_ascii_COLOR.png)|
 
 
 |Original|Ascii|
