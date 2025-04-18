@@ -33,9 +33,9 @@ class Event(TypedDict):
     isBase64Encoded: bool
 
 
-# 128 bytes to 20MB
+# 128 bytes to 32MB
 conditions = [
-    ["content-length-range", 128, 20 * 1 << 20],
+    ["content-length-range", 128, 32 * 1 << 20],
 ]
 
 valid_resolutions: list[str] = [

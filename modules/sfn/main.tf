@@ -201,7 +201,7 @@ resource "aws_lambda_function" "downsize_video" {
     variables = {
       MEDIA_BUCKET      = var.media_bucket_name
       STATUS_TABLE_NAME = var.status_table_name
-      MAX_HEIGHT        = "480"
+      MAX_HEIGHT        = "720"
     }
   }
 }
