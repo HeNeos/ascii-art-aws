@@ -1,108 +1,72 @@
-resource "aws_s3_bucket" "media" {
-  bucket = "media-bucket-${var.stage}-${var.account_id}"
+locals {
+  buckets = {
+    media = {
+      name_prefix     = "media-bucket"
+      expiration_days = 1
+    },
+    audio = {
+      name_prefix     = "audio-bucket"
+      expiration_days = 1
+    },
+    ascii_art = {
+      name_prefix     = "ascii-art-bucket"
+      expiration_days = 1
+    }
+  }
+}
 
+resource "aws_s3_bucket" "bucket" {
+  for_each = local.buckets
+  bucket = "${each.value.name_prefix}-${var.stage}-${var.account_id}"
   lifecycle {
     prevent_destroy = true
   }
 }
 
-resource "aws_s3_bucket_versioning" "media" {
-  depends_on = [aws_s3_bucket.media]
-  bucket     = aws_s3_bucket.media.id
+resource "aws_s3_bucket_versioning" "versioning" {
+  for_each = local.buckets
+  bucket = aws_s3_bucket.bucket[each.key].id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_cors_configuration" "media" {
-  bucket = aws_s3_bucket.media.id
+resource "aws_s3_bucket_lifecycle_configuration" "buckets_config" {
+  for_each = local.buckets
+  bucket = aws_s3_bucket.bucket[each.key].id
+  rule {
+    id = "Delete old files"
+    expiration {
+      days = each.value.expiration_days
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = each.value.expiration_days
+    }
+    filter {}
+    status = "Enabled"
+  }
+  rule {
+    id = "Delete deletion markers"
+    expiration {
+      expired_object_delete_marker = true
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = each.value.expiration_days
+    }
+    filter {}
+    status = "Enabled"
+  }
 
+}
+
+resource "aws_s3_bucket_cors_configuration" "media" {
+  bucket = aws_s3_bucket.bucket["media"].id
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST", "HEAD"]
     allowed_origins = [
       "https://ascii-art-aws.vercel.app" // TODO: replace with valid origins
     ]
-    expose_headers  = ["ETag"]
-    max_age_seconds = 3000
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "media" {
-  depends_on = [aws_s3_bucket_versioning.media]
-  bucket     = aws_s3_bucket.media.id
-  rule {
-    id = "Delete old files"
-    expiration {
-      days = 1
-    }
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket" "audio" {
-  bucket = "audio-bucket-${var.stage}-${var.account_id}"
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-resource "aws_s3_bucket_versioning" "audio" {
-  depends_on = [aws_s3_bucket.audio]
-  bucket     = aws_s3_bucket.audio.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "audio" {
-  depends_on = [aws_s3_bucket_versioning.audio]
-  bucket     = aws_s3_bucket.audio.id
-  rule {
-    id = "Delete old files"
-    expiration {
-      days = 1
-    }
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket" "ascii_art" {
-  bucket = "ascii-art-bucket-${var.stage}-${var.account_id}"
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-resource "aws_s3_bucket_versioning" "ascii_art" {
-  depends_on = [aws_s3_bucket.ascii_art]
-  bucket     = aws_s3_bucket.ascii_art.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "ascii_art" {
-  depends_on = [aws_s3_bucket_versioning.ascii_art]
-  bucket     = aws_s3_bucket.ascii_art.id
-  rule {
-    id = "Delete old files"
-    expiration {
-      days = 2
-    }
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_cors_configuration" "ascii_art" {
-  bucket = aws_s3_bucket.ascii_art.id
-
-  cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "HEAD"]
-    allowed_origins = ["*"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }

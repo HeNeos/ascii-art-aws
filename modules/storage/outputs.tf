@@ -1,25 +1,25 @@
 output "media_bucket_name" {
-  value = aws_s3_bucket.media.id
+  value = aws_s3_bucket.bucket["media"].id
 }
 
 output "audio_bucket_name" {
-  value = aws_s3_bucket.audio.id
+  value = aws_s3_bucket.bucket["audio"].id
 }
 
 output "ascii_art_bucket_name" {
-  value = aws_s3_bucket.ascii_art.id
+  value = aws_s3_bucket.bucket["ascii_art"].id
 }
 
 output "media_bucket_arn" {
-  value = aws_s3_bucket.media.arn
+  value = aws_s3_bucket.bucket["media"].arn
 }
 
 output "audio_bucket_arn" {
-  value = aws_s3_bucket.audio.arn
+  value = aws_s3_bucket.bucket["audio"].arn
 }
 
 output "ascii_art_bucket_arn" {
-  value = aws_s3_bucket.ascii_art.arn
+  value = aws_s3_bucket.bucket["ascii_art"].arn
 }
 
 output "r2_secrets_bucket_name" {
