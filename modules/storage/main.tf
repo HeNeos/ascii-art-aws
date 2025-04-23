@@ -88,12 +88,20 @@ resource "aws_s3_bucket_versioning" "r2_secrets" {
   }
 }
 
+locals {
+  r2_secrets_content = jsonencode({
+    cloudflare_account_id = var.cf_account_id
+    r2_access_key_id      = var.r2_access_key
+    r2_secret_access_key  = var.r2_secret_key
+  })
+}
+
 resource "aws_s3_object" "r2_secrets" {
   bucket                 = aws_s3_bucket.r2_secrets.id
   key                    = "r2_secrets.json"
-  source                 = "r2_secrets.json"
+  content = local.r2_secrets_content
+  content_type = "application/json"
   server_side_encryption = "AES256"
-  etag                   = filemd5("r2_secrets.json")
 }
 
 resource "aws_s3_bucket_public_access_block" "r2_secrets" {

@@ -32,3 +32,18 @@ variable "lambda_image_process_frames" {
 variable "lambda_image_process_image" {
   type = string
 }
+
+variable "r2_access_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "r2_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "cf_account_id" {
+  type      = string
+  sensitive = true
+}
