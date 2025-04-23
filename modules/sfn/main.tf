@@ -133,10 +133,10 @@ resource "aws_lambda_function" "downsize_media" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_media}:latest"
   timeout       = 30
-  memory_size   = 3008
+  memory_size   = 2048
   architectures = ["arm64"]
   ephemeral_storage {
-    size = 1024
+    size = 512
   }
 
   environment {
@@ -190,11 +190,11 @@ resource "aws_lambda_function" "downsize_video" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_video}:latest"
-  timeout       = 90
+  timeout       = 60
   memory_size   = 3008
   architectures = ["arm64"]
   ephemeral_storage {
-    size = 4096
+    size = 1024
   }
 
   environment {
@@ -212,7 +212,7 @@ resource "aws_lambda_function" "extract_audio" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_extract_audio}:latest"
   timeout       = 40
-  memory_size   = 3008
+  memory_size   = 1024
   architectures = ["arm64"]
 
   environment {
@@ -233,7 +233,7 @@ resource "aws_lambda_function" "merge_frames" {
   architectures = ["arm64"]
 
   ephemeral_storage {
-    size = 4096
+    size = 2048
   }
 
   environment {
@@ -256,7 +256,7 @@ resource "aws_lambda_function" "process_frames" {
   memory_size   = 3008
   architectures = ["arm64"]
   ephemeral_storage {
-    size = 2048
+    size = 1024
   }
   environment {
     variables = {
@@ -275,11 +275,11 @@ resource "aws_lambda_function" "process_image" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_process_image}:latest"
-  timeout       = 90
+  timeout       = 60
   memory_size   = 3008
   architectures = ["arm64"]
   ephemeral_storage {
-    size = 2048
+    size = 1024
   }
   environment {
     variables = {

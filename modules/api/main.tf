@@ -123,8 +123,8 @@ resource "aws_lambda_permission" "apigw_upload_lambda" {
 resource "aws_dynamodb_table" "ascii_art" {
   name           = "ascii_art_status-${var.stage}"
   billing_mode   = "PROVISIONED"
-  write_capacity = 20
-  read_capacity  = 20
+  write_capacity = 5
+  read_capacity  = 10
 
   hash_key  = "status"
   range_key = "id"
