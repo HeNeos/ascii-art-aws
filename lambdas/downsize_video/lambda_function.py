@@ -63,7 +63,7 @@ def save_split_video(video_metadata: SplittedVideo) -> str:
         video_metadata.local_path,
     )
 
-    folder_name = f"{video_metadata.video_name}-{video_metadata.random_id}/{video_metadata.video_name}"  # noqa: 501
+    folder_name = f"{video_metadata.random_id}/{video_metadata.video_name}/{video_metadata.video_name}"  # noqa: 501
     key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"  # noqa: 501
     return save_video(
         s3_client, bucket_name, video_metadata.local_path, f"processed/{key}"
@@ -87,7 +87,7 @@ def split_video(video_path: str, media_file: VideoFile) -> list[str]:
             SplittedVideo(
                 start_time=convert_time(start_time),
                 duration=convert_time(batch_duration) if end_time > 0 else None,
-                local_path=f"/tmp/{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}",  # noqa: 501
+                local_path=f"/tmp/{media_file.random_id}-{media_file.file_name}-{batch_id:03d}.{media_file.extension.value}",  # noqa: 501
                 batch_id=batch_id,
                 video_name=media_file.file_name,
                 video_extension=media_file.extension,
