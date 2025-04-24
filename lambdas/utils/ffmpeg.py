@@ -125,7 +125,7 @@ def add_audio_to_video(video_path: str, audio_path: str, output_path: str) -> No
     subprocess.run(command, check=True)
 
 
-def merge_videos(video_files: list[str], output_path: str, crf: int = 28) -> None:
+def merge_videos(video_files: list[str], output_path: str, crf: int = 25) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"
     with open(concat_file, "w") as f:
@@ -158,7 +158,7 @@ def merge_videos(video_files: list[str], output_path: str, crf: int = 28) -> Non
 
 
 def merge_frames(
-    frames_filename: list[str], frame_rate: float, output_path: str, crf: int = 28
+    frames_filename: list[str], frame_rate: float, output_path: str, crf: int = 25
 ) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"
