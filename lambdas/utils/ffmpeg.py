@@ -219,6 +219,8 @@ def trim_video(
 ) -> None:
     ffmpeg_command = [
         "ffmpeg",
+        "-loglevel",
+        "error",
         "-ss",
         start_time,
         "-i",
@@ -230,5 +232,8 @@ def trim_video(
 
     # It's re-encoding again to avoid miss key-frames
     ffmpeg_command += ["-async", "1", output_path]
+
+    # # trying copying the video stream
+    # ffmpeg_command += ["-c", "copy", "-y", output_path]
 
     subprocess.run(ffmpeg_command, check=True)

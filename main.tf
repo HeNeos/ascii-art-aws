@@ -30,10 +30,10 @@ locals {
 }
 
 module "storage" {
-  source     = "./modules/storage"
-  stage      = var.stage
-  region     = var.region
-  account_id = data.aws_caller_identity.current.account_id
+  source        = "./modules/storage"
+  stage         = var.stage
+  region        = var.region
+  account_id    = data.aws_caller_identity.current.account_id
   cf_account_id = var.cf_account_id
   r2_access_key = var.r2_access_key
   r2_secret_key = var.r2_secret_key

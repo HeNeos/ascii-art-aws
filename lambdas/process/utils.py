@@ -1,3 +1,4 @@
+import logging
 from typing import no_type_check
 
 from ctypes import c_void_p, c_byte, byref, c_int, CDLL, Structure
@@ -25,6 +26,9 @@ from lambdas.process.dithering import DitheringStrategy
 
 _initialized: bool = False
 face: FontFace | None = None
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 @no_type_check
@@ -63,10 +67,7 @@ def process_image(
 
     ascii_chars: NDArray[str_] = map_to_char_vectorized(gray_array, char_array)
 
-    grid: AsciiImage = ascii_chars.tolist()
-    image_colors: AsciiColors = [row.tolist() for row in img_array]
-
-    return grid, image_colors, gray_array
+    return ascii_chars.tolist(), [row.tolist() for row in img_array], gray_array
 
 
 def ascii_convert(

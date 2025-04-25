@@ -35,7 +35,7 @@ from lambdas.utils.save import ImageCairo
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-s3_client = boto3.client("s3")
+s3_client: S3Client = boto3.client("s3")
 dynamo_client = boto3.client("dynamodb")
 
 DEFAULT_DITHERING: str = os.environ["DEFAULT_DITHERING"]
@@ -58,7 +58,6 @@ class LambdaEvent(TypedDict):
 
 
 def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
-    logger.info(event)
     global r2_credentials
 
     if r2_credentials is None:
