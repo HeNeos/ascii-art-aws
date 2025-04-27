@@ -307,9 +307,51 @@ resource "aws_cloudwatch_log_group" "lambdas_log_group" {
 }
 
 
+resource "aws_cloudwatch_log_group" "sfn_log_group" {
+  name              = "/aws/vendedlogs/states/AsciiArt-${var.stage}-Logs"
+  retention_in_days = 7
+  tags = {
+    Environment = var.stage
+    Project     = "AsciiArt"
+  }
+}
+
+resource "aws_iam_role_policy" "sfn_logging_policy" {
+  name = "StepFunctionLoggingPolicy-${var.stage}"
+  role = aws_iam_role.step_function_role.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+            "logs:CreateLogDelivery",
+            "logs:CreateLogStream",
+            "logs:GetLogDelivery",
+            "logs:UpdateLogDelivery",
+            "logs:DeleteLogDelivery",
+            "logs:ListLogDeliveries",
+            "logs:PutLogEvents",
+            "logs:PutResourcePolicy",
+            "logs:DescribeResourcePolicies",
+            "logs:DescribeLogGroups"
+        ],
+        Resource = ["*"]
+      }
+    ]
+  })
+}
+
 resource "aws_sfn_state_machine" "step_function" {
   name     = "AsciiArt-${var.stage}"
   role_arn = aws_iam_role.step_function_role.arn
+  type     = "EXPRESS"
+
+  logging_configuration {
+    log_destination        = "${aws_cloudwatch_log_group.sfn_log_group.arn}:*"
+    include_execution_data = true
+    level                  = "ALL"
+  }
 
   definition = <<-DEFINITION
   {
@@ -318,7 +360,7 @@ resource "aws_sfn_state_machine" "step_function" {
     "States": {
       "ExtractFileExtension": {
         "Type": "Pass",
-        "ResultPath": "$.fileExtension",
+        "ResultPath": "$.extractedData",
         "Parameters": {
           "key.$": "$.detail.object.key",
           "bucket_name.$": "$.detail.bucket.name",
@@ -328,117 +370,86 @@ resource "aws_sfn_state_machine" "step_function" {
       },
       "CheckExtension": {
         "Type": "Choice",
-        "OutputPath": "$.fileExtension",
         "Choices": [
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "mp4",
-            "Next": "SetVideoTrue"
+            "Next": "PrepareVideoOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "MP4",
-            "Next": "SetVideoTrue"
+            "Next": "PrepareVideoOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "mov",
-            "Next": "SetVideoTrue"
+            "Next": "PrepareVideoOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "avi",
-            "Next": "SetVideoTrue"
+            "Next": "PrepareVideoOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "jpg",
-            "Next": "SetImageTrue"
+            "Next": "PrepareImageOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "JPG",
-            "Next": "SetImageTrue"
+            "Next": "PrepareImageOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "png",
-            "Next": "SetImageTrue"
+            "Next": "PrepareImageOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "PNG",
-            "Next": "SetImageTrue"
+            "Next": "PrepareImageOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "jpeg",
-            "Next": "SetImageTrue"
+            "Next": "PrepareImageOutput"
           },
           {
-            "Variable": "$.fileExtension.extension",
+            "Variable": "$.extractedData.extension",
             "StringEquals": "JPEG",
-            "Next": "SetImageTrue"
+            "Next": "PrepareImageOutput"
           }
         ],
         "Default": "NotSupported"
       },
-      "SetVideoTrue": {
+      "PrepareVideoOutput": {
         "Type": "Pass",
-        "ResultPath": "$.is_video",
-        "Result": true,
-        "Next": "SetImageFalse"
-      },
-      "SetImageFalse": {
-        "Type": "Pass",
-        "ResultPath": "$.is_image",
-        "Result": false,
-        "Next": "SetOutput"
-      },
-      "SetImageTrue": {
-        "Type": "Pass",
-        "ResultPath": "$.is_image",
-        "Result": true,
-        "Next": "SetVideoFalse"
-      },
-      "SetVideoFalse": {
-        "Type": "Pass",
-        "ResultPath": "$.is_video",
-        "Result": false,
-        "Next": "SetOutput"
-      },
-      "SetOutput": {
-        "Type": "Pass",
-        "ResultPath": "$.output",
+        "ResultPath": "$",
         "Parameters": {
-          "bucket_name.$": "$.bucket_name",
-          "key.$": "$.key",
-          "is_video.$": "$.is_video",
-          "is_image.$": "$.is_image"
+          "bucket_name.$": "$.extractedData.bucket_name",
+          "key.$": "$.extractedData.key",
+          "is_video": true,
+          "is_image": false
         },
-        "OutputPath": "$.output",
-        "Next": "IsVideo"
+        "Next": "DownsizeVideo"
+      },
+      "PrepareImageOutput": {
+        "Type": "Pass",
+        "ResultPath": "$",
+        "Parameters": {
+          "bucket_name.$": "$.extractedData.bucket_name",
+          "key.$": "$.extractedData.key",
+          "is_video": false,
+          "is_image": true
+        },
+        "Next": "DownsizeMedia"
       },
       "NotSupported": {
         "Type": "Fail",
         "Error": "UnsupportedFormatError",
         "Cause": "The uploaded file format is not supported."
-      },
-      "IsVideo": {
-        "Type": "Choice",
-        "Choices": [
-          {
-            "Variable": "$.is_video",
-            "BooleanEquals": true,
-            "Next": "DownsizeVideo"
-          },
-          {
-            "Variable": "$.is_image",
-            "BooleanEquals": true,
-            "Next": "DownsizeMedia"
-          }
-        ],
-        "Default": "NotSupported"
       },
       "DownsizeMedia": {
         "Type": "Task",
@@ -478,8 +489,7 @@ resource "aws_sfn_state_machine" "step_function" {
                 },
                 "ItemProcessor": {
                   "ProcessorConfig": {
-                    "Mode": "DISTRIBUTED",
-                    "ExecutionType": "EXPRESS"
+                    "Mode": "INLINE"
                   },
                   "StartAt": "ProcessFrame",
                   "States": {
@@ -491,7 +501,7 @@ resource "aws_sfn_state_machine" "step_function" {
                         "FunctionName": "${aws_lambda_function.process_frames.arn}"
                       },
                       "ResultSelector": {
-                        "processed_frame.$": "$.Payload.ascii_art_key" 
+                        "processed_frame.$": "$.Payload.ascii_art_key"
                       },
                       "ResultPath": "$.processed_frame_result",
                       "End": true
@@ -506,29 +516,27 @@ resource "aws_sfn_state_machine" "step_function" {
             }
           }
         ],
-        "Next": "CombineOutputs"
+        "ResultPath": "$.parallelResult",
+        "Next": "MergeFrames"
       },
       "ProcessImage": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.process_image.arn}",
         "End": true
       },
-      "CombineOutputs": {
-        "Type": "Pass",
-        "Parameters": {
-          "audio_key.$": "$[0].audio_key",
-          "key.$": "$[0].key",
-          "random_id.$": "$[0].random_id",
-          "videos_key.$": "$[1].videos_key"
-        },
-        "Next": "MergeFrames"
-      },
       "MergeFrames": {
         "Type": "Task",
         "Resource": "${aws_lambda_function.merge_frames.arn}",
+        "Parameters": {
+          "audio_key.$": "$.parallelResult[0].audio_key",
+          "key.$": "$.parallelResult[0].key",
+          "random_id.$": "$.parallelResult[0].random_id",
+          "videos_key.$": "$.parallelResult[1].videos_key"
+        },
         "End": true
       }
     }
   }
   DEFINITION
 }
+
