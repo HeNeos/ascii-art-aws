@@ -325,22 +325,49 @@ resource "aws_iam_role_policy" "sfn_logging_policy" {
       {
         Effect = "Allow",
         Action = [
-            "logs:CreateLogDelivery",
-            "logs:CreateLogStream",
-            "logs:GetLogDelivery",
-            "logs:UpdateLogDelivery",
-            "logs:DeleteLogDelivery",
-            "logs:ListLogDeliveries",
-            "logs:PutLogEvents",
-            "logs:PutResourcePolicy",
-            "logs:DescribeResourcePolicies",
-            "logs:DescribeLogGroups"
+          "logs:CreateLogDelivery",
+          "logs:GetLogDelivery",
+          "logs:UpdateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:DescribeResourcePolicies",
+          "logs:DescribeLogGroups"
         ],
-        Resource = ["*"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "${aws_cloudwatch_log_group.sfn_log_group.arn}:*"
       }
     ]
   })
 }
+
+resource "aws_cloudwatch_log_resource_policy" "sfn_log_policy" {
+  policy_name = "AsciiArt-StepFunction-Logs-${var.stage}"
+  policy_document = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "states.amazonaws.com"
+        },
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "${aws_cloudwatch_log_group.sfn_log_group.arn}:*"
+      }
+    ]
+  })
+}
+
 
 resource "aws_sfn_state_machine" "step_function" {
   name     = "AsciiArt-${var.stage}"
