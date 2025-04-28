@@ -6,7 +6,13 @@ import boto3
 from mypy_boto3_s3.client import S3Client
 from numpy import uint8
 from numpy.typing import NDArray
-from cv2 import COLOR_BGR2RGB, IMWRITE_JPEG_QUALITY, cvtColor, imread, resize, imencode
+from cv2 import (
+    IMWRITE_JPEG_QUALITY,
+    INTER_AREA,
+    imread,
+    resize,
+    imencode,
+)
 
 from lambdas.utils.custom_types import ImageFile
 from lambdas.utils.font import Font
@@ -35,7 +41,8 @@ def rescale_image(image: NDArray[uint8], height_to_resize: int) -> NDArray[uint8
     )
 
     resized_image: NDArray[uint8] = cast(
-        NDArray[uint8], resize(image, (resized_width, resized_height))
+        NDArray[uint8],
+        resize(image, (resized_width, resized_height), interpolation=INTER_AREA),
     )
     return resized_image
 

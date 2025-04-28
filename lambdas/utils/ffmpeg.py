@@ -66,7 +66,7 @@ def resize_video(
     width: int,
     height: int,
     output_path: str,
-    compression_level: int = 18,
+    compression_level: int = 20,
 ) -> None:
     ffmpeg_command = [
         "ffmpeg",
@@ -125,7 +125,7 @@ def add_audio_to_video(video_path: str, audio_path: str, output_path: str) -> No
     subprocess.run(command, check=True)
 
 
-def merge_videos(video_files: list[str], output_path: str, crf: int = 25) -> None:
+def merge_videos(video_files: list[str], output_path: str) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"
     with open(concat_file, "w") as f:
@@ -143,14 +143,10 @@ def merge_videos(video_files: list[str], output_path: str, crf: int = 25) -> Non
         "0",
         "-i",
         concat_file,
-        "-crf",
-        f"{crf}",
-        "-preset",
-        "faster",
-        "-c:v",
-        "libx264",
-        "-c:a",
-        "aac",
+        "-c",
+        "copy",
+        "-movflags",
+        "+faststart",
         output_path,
     ]
 
@@ -158,7 +154,7 @@ def merge_videos(video_files: list[str], output_path: str, crf: int = 25) -> Non
 
 
 def merge_frames(
-    frames_filename: list[str], frame_rate: float, output_path: str, crf: int = 25
+    frames_filename: list[str], frame_rate: float, output_path: str, crf: int = 28
 ) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"
