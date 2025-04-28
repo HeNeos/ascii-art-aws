@@ -6,8 +6,10 @@ import boto3
 from typing import TypedDict, cast
 from json import dumps
 from time import time
+from numpy import uint8
+from numpy.typing import NDArray
+from cv2 import COLOR_BGR2RGB, cvtColor, imread
 
-from PIL import Image
 from mypy_boto3_s3.client import S3Client
 
 from lambdas.utils.custom_types import (
@@ -29,7 +31,7 @@ from lambdas.utils.utils import (
     split_file_name,
     get_r2_client,
 )
-from lambdas.utils.save import ImageCairo
+from lambdas.utils.save_image import ImageCairo
 
 
 logger = logging.getLogger()
@@ -73,8 +75,11 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     media_file: MediaFile = find_media_type(file_path)
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
 
-    image: Image.Image = Image.open(local_file).convert("RGB")
-    width, height = image.size
+    image: NDArray[uint8] = cast(
+        NDArray[uint8], cvtColor(imread(local_file), COLOR_BGR2RGB)
+    )
+
+    height, width = image.shape[:2]
     ascii_dict = get_ascii_dict(width, height, output)
 
     char_array = create_char_array(ascii_dict)

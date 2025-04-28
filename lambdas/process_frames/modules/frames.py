@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from cv2.typing import MatLike
-from PIL import Image
 from typing import TypeAlias
+from numpy import uint8
+from numpy.typing import NDArray
 
 
 @dataclass
 class FrameData:
-    frame: Image.Image | MatLike
+    frame: NDArray[uint8]
     frame_id: int
     video_name: str
 

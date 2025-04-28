@@ -6,22 +6,20 @@ import boto3
 from typing import TypedDict, cast
 from shutil import rmtree
 
-from cairo import ImageSurface
-from cv2.typing import MatLike
 from cv2 import (
-    VideoCapture,
     cvtColor,
+    VideoCapture,
     CAP_PROP_FRAME_WIDTH,
     CAP_PROP_FRAME_HEIGHT,
     CAP_PROP_FPS,
     COLOR_BGR2RGB,
 )
-from PIL import Image
-from numpy import str_
+from numpy import str_, uint8
 from numpy.typing import NDArray
 from mypy_boto3_s3.client import S3Client
 
 from lambdas.utils.custom_types import (
+    ImageExtension,
     MediaFile,
     VideoFile,
     R2Credentials,
@@ -42,6 +40,7 @@ from lambdas.utils.utils import (
     get_r2_credentials,
 )
 from lambdas.utils.save import save_video
+from lambdas.utils.save_image import ImageCairo
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -76,8 +75,11 @@ def extract_frames(video_capture: VideoCapture, video_file: VideoFile) -> Frames
     while True:
         ret, frame = video_capture.read()
         if ret:
+            resized_frame: NDArray[uint8] = cast(
+                NDArray[uint8], cvtColor(frame, COLOR_BGR2RGB)
+            )
             frames.append(
-                FrameData(frame=frame, frame_id=frame_id, video_name=video_name)
+                FrameData(frame=resized_frame, frame_id=frame_id, video_name=video_name)
             )
             frame_id += 1
         else:
@@ -112,14 +114,15 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     logger.info("Finish extract frames")
     ascii_dict = get_ascii_dict(width, height, output)
     char_array: NDArray[str_] = create_char_array(ascii_dict)
-    ascii_frames: list[ImageSurface] = [
-        ascii_convert(
-            Image.fromarray(
-                cvtColor(cast(MatLike, frame.frame), COLOR_BGR2RGB),
+    ascii_frames: list[ImageCairo] = [
+        ImageCairo(
+            ascii_convert(
+                frame.frame,
+                char_array,
+                dithering_strategy,
+                output,
             ),
-            char_array,
-            dithering_strategy,
-            output,
+            ImageExtension.JPG,
         )
         for frame in frames
     ]
@@ -128,11 +131,11 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     frame_paths: list[str] = [
-        os.path.join(output_dir, f"{frame_id:04d}.png")
+        os.path.join(output_dir, f"{frame_id:04d}.{ImageExtension.JPG.value}")
         for frame_id in range(len(ascii_frames))
     ]
     for i in range(len(ascii_frames)):
-        ascii_frames[i].write_to_png(frame_paths[i])
+        ascii_frames[i].write_to_disk(frame_paths[i])
     logger.info("Finish ascii-ed frames")
     video_path: str = f"/tmp/{video_name}.mp4"
     merge_frames(

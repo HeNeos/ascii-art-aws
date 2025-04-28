@@ -16,7 +16,6 @@ from numpy import (
     linspace,
     ndarray,
 )
-from PIL import Image
 
 from lambdas.utils.custom_types import AsciiColors, AsciiImage
 from lambdas.utils.font import Font
@@ -52,14 +51,12 @@ def map_to_char_vectorized(values: ndarray, char_array: ndarray) -> NDArray[str_
 
 
 def process_image(
-    image: Image.Image,
+    image: NDArray[uint8],
     char_array: NDArray[str_],
     dithering_strategy: type[DitheringStrategy] | None = None,
 ) -> tuple[AsciiImage, AsciiColors, NDArray[float64]]:
-    img_array: NDArray[uint8] = array(image, dtype=uint8)
-
     gray_array: NDArray[float64] = clip(
-        dot(img_array[..., :3], [0.3090, 0.5770, 0.1240]), 0.0, 255.0
+        dot(image[..., :3], [0.3090, 0.5770, 0.1240]), 0.0, 255.0
     )
 
     if dithering_strategy is not None:
@@ -67,11 +64,11 @@ def process_image(
 
     ascii_chars: NDArray[str_] = map_to_char_vectorized(gray_array, char_array)
 
-    return ascii_chars.tolist(), [row.tolist() for row in img_array], gray_array
+    return ascii_chars.tolist(), [row.tolist() for row in image], gray_array
 
 
 def ascii_convert(
-    image: Image.Image,
+    image: NDArray[uint8],
     char_array: NDArray[str_],
     dithering_strategy: type[DitheringStrategy] | None,
     output: str,
