@@ -75,6 +75,17 @@ module "sfn" {
   lambda_image_process_image          = var.lambda_image_process_image
 }
 
+module "eventbridge" {
+  source = "./modules/eventbridge"
+  stage = var.stage
+  lambda_arn_downsize_media = module.sfn.lambda_arn_downsize_media
+  lambda_arn_downsize_video = module.sfn.lambda_arn_downsize_video
+  lambda_arn_extract_audio = module.sfn.lambda_arn_extract_audio
+  lambda_arn_merge_frames = module.sfn.lambda_arn_merge_frames
+  lambda_arn_process_frames = module.sfn.lambda_arn_process_frames
+  lambda_arn_process_image = module.sfn.lambda_arn_process_image
+}
+
 # module "sqs" {
 #   source            = "./modules/sqs"
 #   stage             = var.stage

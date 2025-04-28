@@ -34,6 +34,7 @@ downsize_video_path: str | None = None
 class LambdaEvent(TypedDict):
     key: str
     resolution: str
+    warm: bool
 
 
 @dataclass
@@ -108,6 +109,8 @@ def split_video(video_path: str, media_file: VideoFile) -> list[str]:
 def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     global downsize_video_path
     logger.info(event)
+    if event.get("warm", None):
+        return {"warmed": True}
     file_path: str = event["key"]
 
     video_file: VideoFile = cast(VideoFile, find_media_type(file_path))

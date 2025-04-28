@@ -30,6 +30,7 @@ STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
 class LambdaEvent(TypedDict):
     key: str
     bucket_name: str
+    warm: bool
 
 
 def rescale_image(image: NDArray[uint8], height_to_resize: int) -> NDArray[uint8]:
@@ -49,6 +50,8 @@ def rescale_image(image: NDArray[uint8], height_to_resize: int) -> NDArray[uint8
 
 def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
+    if event.get("warm", None):
+        return {"warmed": True}
     file_path: str = event["key"]
     bucket_name: str = event["bucket_name"]
 

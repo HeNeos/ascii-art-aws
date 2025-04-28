@@ -21,10 +21,13 @@ class LambdaEvent(TypedDict):
     downsize_video: str
     random_id: str
     key: str
+    warm: bool
 
 
 def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
+    if event.get("warm", None):
+        return {"warmed": True}
     file_path: str = event["downsize_video"]
     video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)

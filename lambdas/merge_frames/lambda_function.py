@@ -39,10 +39,13 @@ class LambdaEvent(TypedDict):
     audio_key: str
     videos_key: list[str]
     random_id: str
+    warm: bool
 
 
 def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     logger.info(event)
+    if event.get("warm", None):
+        return {"warmed": True}
     global r2_credentials
     global r2_client
 

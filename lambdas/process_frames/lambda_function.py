@@ -65,6 +65,7 @@ class LambdaEvent(TypedDict):
     random_id: str
     dithering: str
     output: str
+    warm: bool
 
 
 def extract_frames(video_capture: VideoCapture, video_file: VideoFile) -> Frames:
@@ -90,6 +91,8 @@ def extract_frames(video_capture: VideoCapture, video_file: VideoFile) -> Frames
 
 def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     logger.info(event)
+    if event.get("warm", None):
+        return {"warmed": True}
     global r2_credentials
 
     if r2_credentials is None:
