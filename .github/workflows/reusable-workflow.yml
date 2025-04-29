@@ -111,32 +111,21 @@ jobs:
         env:
           AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
           AWS_BUCKET_KEY_NAME: ${{ secrets.AWS_BUCKET_KEY_NAME }}
+          TF_VAR_stage: ${{ inputs.stage }}
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_lambda_function_name_downsize_media: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}
+          TF_VAR_lambda_function_name_downsize_video: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}
+          TF_VAR_lambda_function_name_extract_audio: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}
+          TF_VAR_lambda_function_name_merge_frames: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}
+          TF_VAR_lambda_function_name_process_frames: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}
+          TF_VAR_lambda_function_name_process_image: ${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}
         run: |
           cd modules/ecr
           echo "BASE_REPO_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_OUTPUT
           terraform fmt -check
           terraform init -backend-config="bucket=${AWS_BUCKET_NAME}" -backend-config="key=${{inputs.stage}}/ecr/${AWS_BUCKET_KEY_NAME}" -backend-config="region=${AWS_REGION}" -backend-config="workspace_key_prefix="
-          terraform plan \
-            -var="stage=${{inputs.stage}}" \
-            -var="region=${{secrets.AWS_REGION}}" \
-            -var="lambda_function_name_downsize_media=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-            -var="lambda_function_name_downsize_video=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
-            -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-            -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-            -var="lambda_function_name_process_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
-            -var="lambda_function_name_process_image=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
-            -no-color
-
-          terraform apply \
-            -var="stage=${{inputs.stage}}" \
-            -var="region=${{secrets.AWS_REGION}}" \
-            -var="lambda_function_name_downsize_media=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-            -var="lambda_function_name_downsize_video=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
-            -var="lambda_function_name_extract_audio=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-            -var="lambda_function_name_merge_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-            -var="lambda_function_name_process_frames=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
-            -var="lambda_function_name_process_image=${{ steps.parse-config.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
-            -auto-approve -input=false
+          terraform plan -no-color
+          terraform apply -auto-approve -input=false
 
       - name: Get ECR Repository URIs
         id: get-ecr-repository
@@ -278,17 +267,17 @@ jobs:
           TF_VAR_r2_access_key: ${{ secrets.R2_ACCESS_KEY_ID }}
           TF_VAR_r2_secret_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           TF_VAR_cf_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_stage: ${{ inputs.stage }}
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
         run: |
           ecr_repo_base_uri=$(cat base_repo_uri.txt)
-          terraform plan \
-            -var="stage=${{ inputs.stage }}" \
-            -var="lambda_image_downsize_media=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-            -var="lambda_image_downsize_video=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
-            -var="lambda_image_extract_audio=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-            -var="lambda_image_merge_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-            -var="lambda_image_process_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
-            -var="lambda_image_process_image=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
-            -no-color
+          export TF_VAR_lambda_image_downsize_media="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}"
+          export TF_VAR_lambda_image_downsize_video="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}"
+          export TF_VAR_lambda_image_extract_audio="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}"
+          export TF_VAR_lambda_image_merge_frames="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}"
+          export TF_VAR_lambda_image_process_frames="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}"
+          export TF_VAR_lambda_image_process_image="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}"
+          terraform plan -no-color
         continue-on-error: true
 
       - uses: actions/github-script@v6
@@ -337,6 +326,8 @@ jobs:
           TF_VAR_r2_access_key: ${{ secrets.R2_ACCESS_KEY_ID }}
           TF_VAR_r2_secret_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           TF_VAR_cf_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_stage: ${{ inputs.stage }}
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
         if: github.ref == 'refs/heads/dev' && github.event_name == 'push' && inputs.stage == 'dev'
         run: |
           image_repo_downsize_media=$(cat image_repo_downsize_media.txt)
@@ -381,35 +372,33 @@ jobs:
                 exit 1
             fi
           done
-
           ecr_repo_base_uri=$(cat base_repo_uri.txt)
-          terraform apply \
-            -var="stage=${{ inputs.stage }}" \
-            -var="lambda_image_downsize_media=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-            -var="lambda_image_downsize_video=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
-            -var="lambda_image_extract_audio=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-            -var="lambda_image_merge_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-            -var="lambda_image_process_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
-            -var="lambda_image_process_image=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
-            -auto-approve -input=false
+          export TF_VAR_lambda_image_downsize_media="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}"
+          export TF_VAR_lambda_image_downsize_video="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}"
+          export TF_VAR_lambda_image_extract_audio="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}"
+          export TF_VAR_lambda_image_merge_frames="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}"
+          export TF_VAR_lambda_image_process_frames="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}"
+          export TF_VAR_lambda_image_process_image="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}"
+          terraform apply -auto-approve -input=false
 
       - name: Terraform Apply on Prod
         env:
           TF_VAR_r2_access_key: ${{ secrets.R2_ACCESS_KEY_ID }}
           TF_VAR_r2_secret_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           TF_VAR_cf_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_stage: ${{ inputs.stage }}
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && inputs.stage == 'prod'
         run: |
           ecr_repo_base_uri=$(cat base_repo_uri.txt)
-          terraform apply \
-            -var="stage=${{ inputs.stage }}" \
-            -var="lambda_image_downsize_media=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}" \
-            -var="lambda_image_downsize_video=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}" \
-            -var="lambda_image_extract_audio=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}" \
-            -var="lambda_image_merge_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}" \
-            -var="lambda_image_process_frames=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}" \
-            -var="lambda_image_process_image=${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}" \
-            -auto-approve -input=false
+          export TF_VAR_lambda_image_downsize_media="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_MEDIA }}"
+          export TF_VAR_lambda_image_downsize_video="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_DOWNSIZE_VIDEO }}"
+          export TF_VAR_lambda_image_extract_audio="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_EXTRACT_AUDIO }}"
+          export TF_VAR_lambda_image_merge_frames="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_MERGE_FRAMES }}"
+          export TF_VAR_lambda_image_process_frames="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_FRAMES }}"
+          export TF_VAR_lambda_image_process_image="${ecr_repo_base_uri}/${{ needs.deploy_ecr.outputs.LAMBDA_FUNCTION_NAME_PROCESS_IMAGE }}"
+
+          terraform apply -auto-approve -input=false
 
   lambda_update:
     name: Update Lambda Functions Images
