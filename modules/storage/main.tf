@@ -65,7 +65,8 @@ resource "aws_s3_bucket_cors_configuration" "media" {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST", "HEAD"]
     allowed_origins = [
-      "https://ascii-art-aws.vercel.app" // TODO: replace with valid origins
+      # "https://ascii-art-aws.vercel.app", // TODO: replace with valid origins
+      "https://ascii-art-925.pages.dev"
     ]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
