@@ -125,7 +125,8 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
 
     resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
     dithering: str = response["dithering"]["S"]
-    output: str = response["dithering"]["S"]
+    # output: str = response["dithering"]["S"]
+    output: str = "COLOR"
 
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
 

@@ -133,7 +133,7 @@ resource "aws_lambda_function" "downsize_media" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_media}:latest"
   timeout       = 30
-  memory_size   = 2048
+  memory_size   = 3009
   architectures = ["arm64"]
   ephemeral_storage {
     size = 512
@@ -191,7 +191,7 @@ resource "aws_lambda_function" "downsize_video" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_downsize_video}:latest"
   timeout       = 60
-  memory_size   = 3008
+  memory_size   = 7076
   architectures = ["arm64"]
   ephemeral_storage {
     size = 1024
@@ -228,8 +228,8 @@ resource "aws_lambda_function" "merge_frames" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${var.lambda_image_merge_frames}:latest"
-  timeout       = 240
-  memory_size   = 3008
+  timeout       = 180
+  memory_size   = 8845
   architectures = ["arm64"]
 
   ephemeral_storage {
@@ -253,7 +253,7 @@ resource "aws_lambda_function" "process_frames" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_process_frames}:latest"
   timeout       = 150
-  memory_size   = 3008
+  memory_size   = 5308
   architectures = ["arm64"]
   ephemeral_storage {
     size = 1024
@@ -276,7 +276,7 @@ resource "aws_lambda_function" "process_image" {
   package_type  = "Image"
   image_uri     = "${var.lambda_image_process_image}:latest"
   timeout       = 60
-  memory_size   = 3008
+  memory_size   = 5308
   architectures = ["arm64"]
   ephemeral_storage {
     size = 1024
