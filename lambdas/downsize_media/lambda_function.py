@@ -67,6 +67,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
 
     resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
     dithering: str = response["dithering"]["S"]
+    edge_detection: bool = response["edge_detection"]["BOOL"]
     output: str = response["output"]["S"]
 
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
@@ -94,6 +95,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "processed_key": f"processed/{resized_image_name}",
         "random_id": image_file.random_id,
         "dithering": dithering,
+        "edge_detection": edge_detection,
         "resolution": resolution,
         "output": output,
     }

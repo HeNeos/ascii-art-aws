@@ -66,7 +66,7 @@ def resize_video(
     width: int,
     height: int,
     output_path: str,
-    compression_level: int = 20,
+    compression_level: int = 19,
 ) -> None:
     ffmpeg_command = [
         "ffmpeg",
@@ -154,7 +154,7 @@ def merge_videos(video_files: list[str], output_path: str) -> None:
 
 
 def merge_frames(
-    frames_filename: list[str], frame_rate: float, output_path: str, crf: int = 28
+    frames_filename: list[str], frame_rate: float, output_path: str, crf: int = 29
 ) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"

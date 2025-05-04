@@ -64,6 +64,7 @@ class LambdaEvent(TypedDict):
     is_video: bool
     random_id: str
     dithering: str
+    edge_detection: bool
     output: str
     warm: bool
 
@@ -103,6 +104,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     file_path: str = event["processed_key"]
     dithering: str = event.get("dithering", DEFAULT_DITHERING)
     output: str = event.get("output", "COLOR")
+    edge_detection: bool = event.get("edge_detection", False)
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
     media_file: MediaFile = find_media_type(file_path)
@@ -120,10 +122,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     ascii_frames: list[ImageCairo] = [
         ImageCairo(
             ascii_convert(
-                frame.frame,
-                char_array,
-                dithering_strategy,
-                output,
+                frame.frame, char_array, dithering_strategy, output, edge_detection
             ),
             ImageExtension.JPG,
         )

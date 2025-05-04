@@ -512,6 +512,9 @@ resource "aws_sfn_state_machine" "step_function" {
                   "random_id.$": "$.random_id",
                   "is_video.$": "$.is_video",
                   "is_image.$": "$.is_image",
+                  "dithering.$": "$.dithering",
+                  "edge_detection.$": "$.edge_detection",
+                  "output.$": "$.output",
                   "processed_key.$": "$$.Map.Item.Value"
                 },
                 "ItemProcessor": {

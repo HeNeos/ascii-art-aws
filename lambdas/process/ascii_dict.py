@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import TypeAlias
+from numpy import array
 
 
 class AsciiDictColor(Enum):
@@ -30,6 +31,9 @@ class AsciiDictBlackWhite(Enum):
     )
     HighAsciiDict = "  ```.':,;+*c7t13ueK6O#&@"
     LowAsciiDict = "  `.':;*vx5K4&@"
+
+
+AsciiDictEdges = array(list("|_/\\"))
 
 
 class DisplayFormats(Enum):

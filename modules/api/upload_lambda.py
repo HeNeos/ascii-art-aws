@@ -61,6 +61,7 @@ def check_parameters(
     token: str | None,
     dithering: str | None,
     resolution: str | None,
+    edge_detection: str | None,
 ) -> str | None:
     if not token:
         return "Missing uploadToken"
@@ -70,18 +71,24 @@ def check_parameters(
         return "Missing resolution"
     if dithering not in valid_dithering:
         return "Invalid dithering value"
+    if edge_detection not in ["true", "false"]:
+        return "Invalid edge detection option"
     if resolution not in valid_resolutions:
         return "Invalid resolution value"
     return None
 
 
 def lambda_handler(event: Event, _: Any) -> Response:
-    token: str | None = event.get("queryStringParameters", {}).get("uploadToken")
-    dithering: str | None = event.get("queryStringParameters", {}).get("dithering")
-    resolution: str | None = event.get("queryStringParameters", {}).get("resolution")
-    output: str = event.get("queryStringParameters", {}).get("output", "color")
+    query_string_parameters: dict[str, str] = event.get("queryStringParameters", {})
+    token: str | None = query_string_parameters.get("uploadToken")
+    dithering: str | None = query_string_parameters.get("dithering")
+    edge_detection: str | None = query_string_parameters.get("edge_detection")
+    resolution: str | None = query_string_parameters.get("resolution")
+    output: str = query_string_parameters.get("output", "color")
 
-    error_message: str | None = check_parameters(token, dithering, resolution)
+    error_message: str | None = check_parameters(
+        token, dithering, resolution, edge_detection
+    )
 
     if error_message:
         return {
@@ -127,6 +134,7 @@ def lambda_handler(event: Event, _: Any) -> Response:
             "status": {"S": "PENDING"},
             "id": {"S": token},
             "dithering": {"S": dithering},
+            "edge_detection": {"BOOL": edge_detection == "true"},
             "resolution": {"S": resolution},
             "ttl": {"N": str(int(time() + 300))},
             "output": {"S": output},

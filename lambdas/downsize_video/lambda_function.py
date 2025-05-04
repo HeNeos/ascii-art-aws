@@ -125,6 +125,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
 
     resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
     dithering: str = response["dithering"]["S"]
+    edge_detection: bool = response["edge_detection"]["BOOL"]
     # output: str = response["dithering"]["S"]
     output: str = "COLOR"
 
@@ -173,6 +174,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "processed_key": processed_key,
         "random_id": video_file.random_id,
         "dithering": dithering,
+        "edge_detection": edge_detection,
         "resolution": resolution,
         "output": output,
     }

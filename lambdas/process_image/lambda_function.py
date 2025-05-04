@@ -56,6 +56,7 @@ class LambdaEvent(TypedDict):
     is_video: bool
     random_id: str
     dithering: str
+    edge_detection: bool
     output: str
     warm: bool
 
@@ -74,6 +75,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     dithering: str = event.get("dithering", DEFAULT_DITHERING)
     output: str = event.get("output", "COLOR")
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
+    edge_detection: bool = event.get("edge_detection", False)
 
     media_file: MediaFile = find_media_type(file_path)
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
@@ -86,7 +88,9 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     ascii_dict = get_ascii_dict(width, height, output)
 
     char_array = create_char_array(ascii_dict)
-    ascii_image = ascii_convert(image, char_array, dithering_strategy, output)
+    ascii_image = ascii_convert(
+        image, char_array, dithering_strategy, output, edge_detection
+    )
     image_object: ImageCairo = ImageCairo(
         ascii_image, ImageExtension(media_file.extension)
     )

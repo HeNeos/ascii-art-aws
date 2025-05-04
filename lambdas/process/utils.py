@@ -15,13 +15,16 @@ from numpy import (
     digitize,
     linspace,
     ndarray,
+    zeros_like,
 )
+from numba import jit
 
 from lambdas.utils.custom_types import AsciiColors, AsciiImage
 from lambdas.utils.font import Font
-from lambdas.process.ascii_dict import AsciiDict, display_formats
+from lambdas.process.ascii_dict import AsciiDict, display_formats, AsciiDictEdges
 from lambdas.process.canvas_context.cairo_context import CairoContextFactory
 from lambdas.process.dithering import DitheringStrategy
+from lambdas.process.edge_detection import EdgeDetection
 
 _initialized: bool = False
 face: FontFace | None = None
@@ -43,26 +46,91 @@ def create_char_array(ascii_dict: AsciiDict) -> NDArray[str_]:
     return array(list(ascii_dict.value))
 
 
-def map_to_char_vectorized(values: ndarray, char_array: ndarray) -> NDArray[str_]:
+@jit(
+    "int32(float64)",
+    nopython=True,
+    nogil=True,
+    fastmath=True,
+    cache=True,
+)
+def map_angle_to_ascii(angle: float) -> int:
+    if -22.5 <= angle < 22.5 or 157.5 <= angle <= 180 or -180 <= angle < -157.5:
+        return 0  # |
+    elif 67.5 <= angle < 112.5 or -112.5 <= angle < -67.5:
+        return -1  # _
+    elif 22.5 <= angle < 67.5 or -157.5 <= angle < -112.5:
+        return 2  # /
+    elif 112.5 <= angle < 157.5 or -67.5 <= angle < -22.5:
+        return 3  # \
+    else:
+        return -1  # No edge
+
+
+@jit(
+    "int32[:, :](float64[:, :], float64[:, :])",
+    nopython=True,
+    nogil=True,
+    fastmath=True,
+    cache=True,
+)
+def _map_edges_to_positions(
+    angles: NDArray[float64],
+    magnitudes: NDArray[float64],
+) -> NDArray[int32]:
+    positions: NDArray[int32] = zeros_like(angles, dtype=int32)
+    for i in range(angles.shape[0]):
+        for j in range(angles.shape[1]):
+            if magnitudes[i, j] < 0.55:
+                positions[i, j] = -1
+            else:
+                positions[i, j] = map_angle_to_ascii(angles[i, j])
+    return positions
+
+
+def map_to_char_vectorized(
+    values: ndarray, char_array: ndarray, edge_detection_parameters: EdgeDetection
+) -> NDArray[str_]:
     positions: NDArray[int32] = (
         digitize(values, linspace(0, 256, len(char_array) + 1)) - 1
     )
-    return char_array[positions]
+    output: NDArray[str_] = char_array[positions]
+
+    angles = edge_detection_parameters.angles
+    magnitudes = edge_detection_parameters.magnitudes
+    canny_array = edge_detection_parameters.canny_array
+
+    if angles is not None and magnitudes is not None:
+        edges_positions: NDArray[int32] = _map_edges_to_positions(angles, magnitudes)
+        mask = edges_positions != -1
+        if canny_array is not None:
+            canny_array = canny_array.reshape(values.shape)
+            mask &= canny_array != 0
+        output[mask] = AsciiDictEdges[edges_positions[mask]]
+
+    return output
 
 
 def process_image(
     image: NDArray[uint8],
     char_array: NDArray[str_],
     dithering_strategy: type[DitheringStrategy] | None = None,
+    edge_detection: bool = False,
 ) -> tuple[AsciiImage, AsciiColors, NDArray[float64]]:
     gray_array: NDArray[float64] = clip(
-        dot(image[..., :3], [0.3090, 0.5770, 0.1240]), 0.0, 255.0
+        dot(image[..., :3], [0.3090, 0.5670, 0.1240]), 0.0, 255.0
     )
+
+    edge_detection_parameters: EdgeDetection = EdgeDetection()
+    if edge_detection:
+        edge_detection_parameters.apply_canny(image)
+        edge_detection_parameters.apply_sobel(gray_array)
 
     if dithering_strategy is not None:
         gray_array = dithering_strategy.dithering(gray_array, len(char_array))
 
-    ascii_chars: NDArray[str_] = map_to_char_vectorized(gray_array, char_array)
+    ascii_chars: NDArray[str_] = map_to_char_vectorized(
+        gray_array, char_array, edge_detection_parameters
+    )
 
     return ascii_chars.tolist(), [row.tolist() for row in image], gray_array
 
@@ -72,9 +140,13 @@ def ascii_convert(
     char_array: NDArray[str_],
     dithering_strategy: type[DitheringStrategy] | None,
     output: str,
+    edge_detection: bool = False,
 ) -> ImageSurface:
     grid, image_colors, gray_array = process_image(
-        image=image, char_array=char_array, dithering_strategy=dithering_strategy
+        image=image,
+        char_array=char_array,
+        dithering_strategy=dithering_strategy,
+        edge_detection=edge_detection,
     )
     return create_ascii_image(grid, image_colors, gray_array, output)
 
