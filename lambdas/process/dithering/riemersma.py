@@ -19,18 +19,18 @@ def dither_pixel(
     weights: npt.NDArray[np.int64],
     error_array: npt.NDArray[np.float64],
 ) -> None:
-    num_levels = len(weights)
+    num_levels: int = len(weights)
     pixel_value_at_pos = img[cur_y, cur_x]
 
-    err_sum = 0.0
+    err_sum: float = 0.0
     for i in range(num_levels):
         err_sum += error_array[i] * weights[i]
 
-    target_value = pixel_value_at_pos + err_sum / weights[num_levels - 1]
-    target_value_clamped = min(max(target_value, 0.0), 255.0)
+    target_value: float = pixel_value_at_pos + err_sum / weights[num_levels - 1]
+    target_value_clamped: float = min(max(target_value, 0.0), 255.0)
 
-    step = 255.0 / (num_levels - 1.0)
-    level_index = int(target_value_clamped / step + 0.5)
+    step: float = 255.0 / (num_levels - 1.0)
+    level_index: int = int(target_value_clamped / step + 0.5)
 
     if level_index < 0:
         level_index = 0
@@ -38,7 +38,8 @@ def dither_pixel(
         level_index = num_levels - 1
 
     final_quantized_value: float = float(level_index * step)
-    new_error = pixel_value_at_pos - final_quantized_value
+    new_error: float = pixel_value_at_pos - final_quantized_value
+
     img[cur_y, cur_x] = final_quantized_value
 
     for i in range(num_levels - 1):
@@ -90,55 +91,10 @@ def hilbert_level_1(
     dir_array: npt.NDArray[np.int64],
     error_array: npt.NDArray[np.float64],
 ) -> None:
-    if direction == 1:
-        dir_array[0] = 3
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 4
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 1
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-    elif direction == 2:
-        dir_array[0] = 4
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 3
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 2
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-    elif direction == 3:
-        dir_array[0] = 1
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 2
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 3
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-    elif direction == 4:
-        dir_array[0] = 2
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 1
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
-        dir_array[0] = 4
+    direction_movements: list[list[int]] = [[3, 4, 1], [4, 3, 2], [1, 2, 3], [2, 1, 4]]
+    direction_changes: list[int] = direction_movements[direction - 1]
+    for change in direction_changes:
+        dir_array[0] = change
         move_and_dither(
             img, img_width, img_height, weights, pos, dir_array, error_array
         )
@@ -148,7 +104,7 @@ def hilbert_level_1(
     "void(int64, int64, float64[:, :], int64, int64, int64[:], int64[:], int64[:], float64[:])",
     nogil=True,
     fastmath=True,
-    # cache=True,
+    cache=True,
 )
 def hilbert_level(
     level: int,
@@ -161,15 +117,24 @@ def hilbert_level(
     dir_array: npt.NDArray[np.int64],
     error_array: npt.NDArray[np.float64],
 ) -> None:
+    direction_movements: list[list[int]] = [[3, 4, 1], [4, 3, 2], [1, 2, 3], [2, 1, 4]]
+    hilbert_movements: list[list[int]] = [
+        [2, 1, 1, 4],
+        [1, 2, 2, 3],
+        [4, 3, 3, 2],
+        [3, 4, 4, 1],
+    ]
+    hilbert_changes: list[int] = hilbert_movements[direction - 1]
+    direction_changes: list[int] = direction_movements[direction - 1]
     if level == 1:
         hilbert_level_1(
             direction, img, img_width, img_height, weights, pos, dir_array, error_array
         )
     else:
-        if direction == 1:
+        for i in range(3):
             hilbert_level(
                 level - 1,
-                2,
+                hilbert_changes[i],
                 img,
                 img_width,
                 img_height,
@@ -178,222 +143,21 @@ def hilbert_level(
                 dir_array,
                 error_array,
             )
-            dir_array[0] = 3
+            dir_array[0] = direction_changes[i]
             move_and_dither(
                 img, img_width, img_height, weights, pos, dir_array, error_array
             )
-            hilbert_level(
-                level - 1,
-                1,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 4
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                1,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 1
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                4,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-        elif direction == 2:
-            hilbert_level(
-                level - 1,
-                1,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 4
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                2,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 3
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                2,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 2
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                3,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-        elif direction == 3:
-            hilbert_level(
-                level - 1,
-                4,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 1
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                3,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 2
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                3,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 3
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                2,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-        elif direction == 4:
-            hilbert_level(
-                level - 1,
-                3,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 2
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                4,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 1
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                4,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
-            dir_array[0] = 4
-            move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
-            )
-            hilbert_level(
-                level - 1,
-                1,
-                img,
-                img_width,
-                img_height,
-                weights,
-                pos,
-                dir_array,
-                error_array,
-            )
+        hilbert_level(
+            level - 1,
+            hilbert_changes[3],
+            img,
+            img_width,
+            img_height,
+            weights,
+            pos,
+            dir_array,
+            error_array,
+        )
 
 
 @dataclass
@@ -416,8 +180,8 @@ class DitheringRiemersma(DitheringStrategy):
         if height == 0 or width == 0:
             return image_array.copy()
 
-        SIZE = quantization_levels  # queue size: number of pixels remembered
-        MAX = quantization_levels  # relative weight of youngest pixel in the queue
+        SIZE = quantization_levels
+        MAX = quantization_levels
 
         weights = np.zeros(SIZE, dtype=np.int64)
         multiplier = np.exp(np.log(float(MAX)) / float(SIZE - 1))
