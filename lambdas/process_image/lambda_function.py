@@ -3,6 +3,7 @@ import os
 
 import boto3
 
+from cairo import ImageSurface, FORMAT_ARGB32
 from typing import TypedDict, cast
 from json import dumps
 from time import time
@@ -32,7 +33,6 @@ from lambdas.utils.utils import (
     get_r2_client,
 )
 from lambdas.utils.save_image import ImageCairo
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -94,6 +94,19 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     image_object: ImageCairo = ImageCairo(
         ascii_image, ImageExtension(media_file.extension)
     )
+    # TODO: fix, this line apply the postprocessing and save it to local file.
+    post_processed_local_file: str = (
+        f"/tmp/{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}"
+    )
+    image_object.write_to_disk(post_processed_local_file)
+    post_processed_image: NDArray[uint8] = cast(
+        NDArray[uint8], cvtColor(imread(post_processed_local_file), COLOR_BGR2RGB)
+    )
+    height, width = post_processed_image.shape[:2]
+    image_object.image = ImageSurface.create_for_data(
+        post_processed_image, FORMAT_ARGB32, width, height
+    )
+
     image_object.write_to_buffer()
     # key = image_object.save_image(
     #     s3_client,

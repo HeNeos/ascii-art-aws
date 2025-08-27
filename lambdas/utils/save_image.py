@@ -6,13 +6,15 @@ from mypy_boto3_s3.client import S3Client
 from numpy import uint8, ndarray
 from numpy.typing import NDArray
 from cv2 import cvtColor, COLOR_BGRA2BGR, imwrite, IMWRITE_JPEG_QUALITY
+from lambdas.process.post_processing.utils import apply_post_processing
+from typing import cast
 
 
 class ImageCairo:
     def __init__(self, image: ImageSurface, image_format: ImageExtension) -> None:
         self.image = image
-        self.height = image.get_height()
-        self.width = image.get_width()
+        self.height: int = image.get_height()
+        self.width: int = image.get_width()
         self.surface_format = image.get_format()
         self.buffer: io.BytesIO = io.BytesIO()
         self.image_format: ImageExtension = image_format
@@ -24,25 +26,33 @@ class ImageCairo:
         self.image.write_to_png(self.buffer)
 
     def write_to_disk(self, path: str) -> None:
-        if self.surface_format == FORMAT_ARGB32:
-            cairo_data_bgra: NDArray[uint8] = ndarray(
-                shape=(self.height, self.width, 4),
-                dtype=uint8,
-                buffer=self.image.get_data(),
-                strides=(self.image.get_stride(), 4, 1),
-            )
-            image_bgr = cvtColor(cairo_data_bgra, COLOR_BGRA2BGR)
-        elif self.surface_format == FORMAT_RGB24:
-            cairo_data_bgrx: NDArray[uint8] = ndarray(
-                shape=(self.height, self.width, 4),
-                dtype=uint8,
-                buffer=self.image.get_data(),
-                strides=(self.image.get_stride(), 4, 1),
-            )
-            image_bgr = cairo_data_bgrx[:, :, :3]
-        else:
-            print(f"Error: Unsupported Cairo surface format {self.surface_format}")
-            return
+        image_bgr: NDArray[uint8]
+        match self.surface_format:
+            # TODO: fix format
+            case FORMAT_ARGB32:
+                cairo_data_bgra: NDArray[uint8] = ndarray(
+                    shape=(self.height, self.width, 4),
+                    dtype=uint8,
+                    buffer=self.image.get_data(),
+                    strides=(self.image.get_stride(), 4, 1),
+                )
+                image_bgr = cast(
+                    NDArray[uint8], cvtColor(cairo_data_bgra, COLOR_BGRA2BGR)
+                )
+            case FORMAT_RGB24:
+                cairo_data_bgrx: NDArray[uint8] = ndarray(
+                    shape=(self.height, self.width, 4),
+                    dtype=uint8,
+                    buffer=self.image.get_data(),
+                    strides=(self.image.get_stride(), 4, 1),
+                )
+                image_bgr = cairo_data_bgrx[:, :, :3]
+            case _:
+                print(f"Error: Unsupported Cairo surface format {self.surface_format}")
+                return
+
+        # TODO: extract from write to disk
+        image_bgr = apply_post_processing(image_bgr)
         imwrite(
             path,
             image_bgr,
