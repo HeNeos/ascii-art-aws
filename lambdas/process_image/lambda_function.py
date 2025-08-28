@@ -8,6 +8,7 @@ from typing import TypedDict, cast
 from json import dumps
 from time import time
 from numpy import uint8
+from shutil import rmtree
 from numpy.typing import NDArray
 from cv2 import COLOR_BGR2RGB, cvtColor, imread
 
@@ -98,6 +99,11 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     post_processed_local_file: str = (
         f"/tmp/{random_id}/{media_file.file_name}_ascii.jpg"
     )
+    output_dir = os.path.join("/tmp", random_id)
+    if os.path.exists(output_dir):
+        rmtree(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+
     image_object.write_to_disk(post_processed_local_file)
 
     files_in_tmp: list[str] = os.listdir("/tmp/")

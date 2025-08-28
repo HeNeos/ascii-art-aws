@@ -59,7 +59,6 @@ class ImageCairo:
             image_bgr,
             [IMWRITE_JPEG_QUALITY, 90],
         )
-        logger.info(f"Saved to disk in: {path}")
 
     def save_image(self, s3_client: S3Client, bucket_name: str, key: str) -> str:
         self.buffer.seek(0)
