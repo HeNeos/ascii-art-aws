@@ -13,7 +13,7 @@ RUN dnf update -y && \
   tar \
   && dnf clean all
 
-RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz && \
+RUN wget https://github.com/HeNeos/ascii-art-aws/blob/dev/ffmpeg-release-arm64-static.tar.xz && \
   tar -xf ffmpeg-release-arm64-static.tar.xz --strip-components=1 -C /usr/local/bin && \
   rm ffmpeg-release-arm64-static.tar.xz
 
