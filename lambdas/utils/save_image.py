@@ -1,4 +1,5 @@
 import io
+import logging
 
 from cairo import ImageSurface, FORMAT_ARGB32, FORMAT_RGB24
 from lambdas.utils.custom_types import ImageExtension
@@ -8,6 +9,9 @@ from numpy.typing import NDArray
 from cv2 import cvtColor, COLOR_BGRA2BGR, imwrite, IMWRITE_JPEG_QUALITY
 from lambdas.process.post_processing.utils import apply_post_processing
 from typing import cast
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 class ImageCairo:
@@ -55,6 +59,7 @@ class ImageCairo:
             image_bgr,
             [IMWRITE_JPEG_QUALITY, 90],
         )
+        logger.info(f"Saved to disk in: {path}")
 
     def save_image(self, s3_client: S3Client, bucket_name: str, key: str) -> str:
         self.buffer.seek(0)
