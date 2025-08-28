@@ -66,6 +66,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     if event.get("warm", None):
         return {"warmed": True}
     global r2_credentials
+    global r2_client
 
     if r2_credentials is None:
         r2_credentials = get_r2_credentials(s3_client, R2_SECRETS_BUCKET)
@@ -106,18 +107,15 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
 
     image_object.write_to_disk(post_processed_local_file)
 
-    files_in_tmp: list[str] = os.listdir("/tmp/")
-    logger.info(files_in_tmp)
-
-    post_processed_image: NDArray[uint8] = cast(
-        NDArray[uint8], cvtColor(imread(post_processed_local_file), COLOR_BGR2RGB)
-    )
-    height, width = post_processed_image.shape[:2]
-    image_object.image = ImageSurface.create_for_data(
-        post_processed_image, FORMAT_ARGB32, width, height
+    object_key: str = (
+        f"{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}"
     )
 
-    image_object.write_to_buffer()
+    r2_client = get_r2_client(r2_credentials, r2_client)
+
+    with open(post_processed_local_file, "rb") as f:
+        r2_client.upload_fileobj(f, r2_credentials.ascii_art_bucket_name, object_key)
+
     # key = image_object.save_image(
     #     s3_client,
     #     ASCII_ART_BUCKET,
@@ -131,16 +129,11 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     #     },
     #     ExpiresIn=300,
     # )
-    key = image_object.save_image(
-        get_r2_client(r2_credentials, r2_client),
-        r2_credentials.ascii_art_bucket_name,
-        f"{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}",
-    )
     url: str = get_r2_client(r2_credentials, r2_client).generate_presigned_url(
         "get_object",
         Params={
             "Bucket": r2_credentials.ascii_art_bucket_name,
-            "Key": key,
+            "Key": object_key,
         },
         ExpiresIn=300,
     )
@@ -155,6 +148,6 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     )
     return {
         "statusCode": 200,
-        "ascii_art_key": key,
+        "ascii_art_key": object_key,
         "body": dumps(cast(dict[str, str], {"url": url})),
     }
