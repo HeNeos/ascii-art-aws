@@ -27,29 +27,28 @@ class ImageCairo:
 
     def write_to_disk(self, path: str) -> None:
         image_bgr: NDArray[uint8]
-        match self.surface_format:
+        if self.surface_format == FORMAT_ARGB32:
             # TODO: fix format
-            case FORMAT_ARGB32:
-                cairo_data_bgra: NDArray[uint8] = ndarray(
-                    shape=(self.height, self.width, 4),
-                    dtype=uint8,
-                    buffer=self.image.get_data(),
-                    strides=(self.image.get_stride(), 4, 1),
-                )
-                image_bgr = cast(
-                    NDArray[uint8], cvtColor(cairo_data_bgra, COLOR_BGRA2BGR)
-                )
-            case FORMAT_RGB24:
-                cairo_data_bgrx: NDArray[uint8] = ndarray(
-                    shape=(self.height, self.width, 4),
-                    dtype=uint8,
-                    buffer=self.image.get_data(),
-                    strides=(self.image.get_stride(), 4, 1),
-                )
-                image_bgr = cairo_data_bgrx[:, :, :3]
-            case _:
-                print(f"Error: Unsupported Cairo surface format {self.surface_format}")
-                return
+            cairo_data_bgra: NDArray[uint8] = ndarray(
+                shape=(self.height, self.width, 4),
+                dtype=uint8,
+                buffer=self.image.get_data(),
+                strides=(self.image.get_stride(), 4, 1),
+            )
+            image_bgr = cast(
+                NDArray[uint8], cvtColor(cairo_data_bgra, COLOR_BGRA2BGR)
+            )
+        elif self.surface_format == FORMAT_RGB24:
+            cairo_data_bgrx: NDArray[uint8] = ndarray(
+                shape=(self.height, self.width, 4),
+                dtype=uint8,
+                buffer=self.image.get_data(),
+                strides=(self.image.get_stride(), 4, 1),
+            )
+            image_bgr = cairo_data_bgrx[:, :, :3]
+        else:
+            print(f"Error: Unsupported Cairo surface format {self.surface_format}")
+            return
 
         # TODO: extract from write to disk
         image_bgr = apply_post_processing(image_bgr)
