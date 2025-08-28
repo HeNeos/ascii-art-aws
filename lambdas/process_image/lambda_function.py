@@ -96,9 +96,13 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     )
     # TODO: fix, this line apply the postprocessing and save it to local file.
     post_processed_local_file: str = (
-        f"/tmp/{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}"
+        f"/tmp/{random_id}/{media_file.file_name}_ascii.jpg"
     )
     image_object.write_to_disk(post_processed_local_file)
+
+    files_in_tmp: list[str] = os.listdir("/tmp/")
+    logger.info(files_in_tmp)
+
     post_processed_image: NDArray[uint8] = cast(
         NDArray[uint8], cvtColor(imread(post_processed_local_file), COLOR_BGR2RGB)
     )

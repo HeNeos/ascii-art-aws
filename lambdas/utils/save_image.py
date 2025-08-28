@@ -35,9 +35,7 @@ class ImageCairo:
                 buffer=self.image.get_data(),
                 strides=(self.image.get_stride(), 4, 1),
             )
-            image_bgr = cast(
-                NDArray[uint8], cvtColor(cairo_data_bgra, COLOR_BGRA2BGR)
-            )
+            image_bgr = cast(NDArray[uint8], cvtColor(cairo_data_bgra, COLOR_BGRA2BGR))
         elif self.surface_format == FORMAT_RGB24:
             cairo_data_bgrx: NDArray[uint8] = ndarray(
                 shape=(self.height, self.width, 4),
