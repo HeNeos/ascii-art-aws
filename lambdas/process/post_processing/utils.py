@@ -33,10 +33,10 @@ def get_post_processing_strategy(name: str) -> PostProcessingStrategy | None:
 
 def apply_post_processing(image: NDArray[uint8]) -> NDArray[uint8]:
     post_processing_parameters: dict[str, float] = {
-        "brightness": 8.0,
-        "contrast": 1.30,
-        "saturation": 1.24,
-        "exposure": 1.20,
+        "brightness": 6.0,
+        "contrast": 1.28,
+        "saturation": 1.22,
+        "exposure": 1.18,
     }
 
     for filter, value in post_processing_parameters.items():
