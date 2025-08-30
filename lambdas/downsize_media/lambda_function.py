@@ -3,16 +3,16 @@ import os
 from typing import TypedDict, cast
 
 import boto3
-from mypy_boto3_s3.client import S3Client
-from numpy import uint8
-from numpy.typing import NDArray
 from cv2 import (
     IMWRITE_JPEG_QUALITY,
     INTER_AREA,
+    imencode,
     imread,
     resize,
-    imencode,
 )
+from mypy_boto3_s3.client import S3Client
+from numpy import uint8
+from numpy.typing import NDArray
 
 from lambdas.utils.custom_types import ImageFile
 from lambdas.utils.font import Font
@@ -38,11 +38,11 @@ def rescale_image(image: NDArray[uint8], height_to_resize: int) -> NDArray[uint8
 
     resized_height: int = height_to_resize // Font.Height.value
     resized_width: int = int(
-        resized_height * width * Font.Height.value / (Font.Width.value * height)
+        resized_height * width * Font.Height.value / (Font.Width.value * height),
     )
 
     resized_image: NDArray[uint8] = cast(
-        NDArray[uint8],
+        "NDArray[uint8]",
         resize(image, (resized_width, resized_height), interpolation=INTER_AREA),
     )
     return resized_image
@@ -55,7 +55,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     file_path: str = event["key"]
     bucket_name: str = event["bucket_name"]
 
-    image_file: ImageFile = cast(ImageFile, find_media_type(file_path))
+    image_file: ImageFile = cast("ImageFile", find_media_type(file_path))
 
     response: dict | None = dynamo_client.get_item(
         TableName=STATUS_TABLE_NAME,
@@ -71,12 +71,14 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     output: str = response["output"]["S"]
 
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
-    image: NDArray[uint8] = cast(NDArray[uint8], imread(local_file))
+    image: NDArray[uint8] = cast("NDArray[uint8]", imread(local_file))
 
     resized_image = rescale_image(image, resolution)
     resized_image_name = f"{image_file.random_id}/{image_file.file_name}_resized.jpg"
     success, encoded_image_buffer = imencode(
-        ".jpg", resized_image, [IMWRITE_JPEG_QUALITY, 90]
+        ".jpg",
+        resized_image,
+        [IMWRITE_JPEG_QUALITY, 90],
     )
     if not success:
         raise ValueError("Error: Failed to encode resized image")

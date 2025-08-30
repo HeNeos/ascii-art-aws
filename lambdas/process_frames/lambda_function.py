@@ -1,46 +1,44 @@
 import logging
 import os
+from shutil import rmtree
+from typing import TypedDict, cast
 
 import boto3
-
-from typing import TypedDict, cast
-from shutil import rmtree
-
 from cv2 import (
-    cvtColor,
-    VideoCapture,
-    CAP_PROP_FRAME_WIDTH,
-    CAP_PROP_FRAME_HEIGHT,
     CAP_PROP_FPS,
+    CAP_PROP_FRAME_HEIGHT,
+    CAP_PROP_FRAME_WIDTH,
     COLOR_BGR2RGB,
+    VideoCapture,
+    cvtColor,
 )
+from mypy_boto3_s3.client import S3Client
 from numpy import str_, uint8
 from numpy.typing import NDArray
-from mypy_boto3_s3.client import S3Client
 
+from lambdas.process.dithering import DitheringStrategy
+from lambdas.process.dithering.utils import get_dithering_strategy
+from lambdas.process.utils import (
+    ascii_convert,
+    create_char_array,
+    get_ascii_dict,
+)
+from lambdas.process_frames.modules.frames import FrameData, Frames
 from lambdas.utils.custom_types import (
     ImageExtension,
     MediaFile,
-    VideoFile,
     R2Credentials,
+    VideoFile,
 )
 from lambdas.utils.ffmpeg import merge_frames
-from lambdas.process_frames.modules.frames import FrameData, Frames
-from lambdas.process.utils import (
-    create_char_array,
-    get_ascii_dict,
-    ascii_convert,
-)
-from lambdas.process.dithering import DitheringStrategy
-from lambdas.process.dithering.utils import get_dithering_strategy
+from lambdas.utils.save import save_video
+from lambdas.utils.save_image import ImageCairo
 from lambdas.utils.utils import (
     download_from_s3,
     find_media_type,
-    split_file_name,
     get_r2_credentials,
+    split_file_name,
 )
-from lambdas.utils.save import save_video
-from lambdas.utils.save_image import ImageCairo
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -78,10 +76,11 @@ def extract_frames(video_capture: VideoCapture, video_file: VideoFile) -> Frames
         ret, frame = video_capture.read()
         if ret:
             resized_frame: NDArray[uint8] = cast(
-                NDArray[uint8], cvtColor(frame, COLOR_BGR2RGB)
+                "NDArray[uint8]",
+                cvtColor(frame, COLOR_BGR2RGB),
             )
             frames.append(
-                FrameData(frame=resized_frame, frame_id=frame_id, video_name=video_name)
+                FrameData(frame=resized_frame, frame_id=frame_id, video_name=video_name),
             )
             frame_id += 1
         else:
@@ -114,7 +113,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     width: int = int(video_capture.get(CAP_PROP_FRAME_WIDTH))
     height: int = int(video_capture.get(CAP_PROP_FRAME_HEIGHT))
     video_fps = video_capture.get(CAP_PROP_FPS)
-    frames: Frames = extract_frames(video_capture, cast(VideoFile, media_file))
+    frames: Frames = extract_frames(video_capture, cast("VideoFile", media_file))
     video_capture.release()
     logger.info("Finish extract frames")
     ascii_dict = get_ascii_dict(width, height, output)
@@ -122,7 +121,11 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     ascii_frames: list[ImageCairo] = [
         ImageCairo(
             ascii_convert(
-                frame.frame, char_array, dithering_strategy, output, edge_detection
+                frame.frame,
+                char_array,
+                dithering_strategy,
+                output,
+                edge_detection,
             ),
             ImageExtension.JPG,
         )

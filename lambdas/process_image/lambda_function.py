@@ -1,39 +1,36 @@
 import logging
 import os
+from json import dumps
+from shutil import rmtree
+from time import time
+from typing import TypedDict, cast
 
 import boto3
-
-from cairo import ImageSurface, FORMAT_ARGB32
-from typing import TypedDict, cast
-from json import dumps
-from time import time
-from numpy import uint8
-from shutil import rmtree
-from numpy.typing import NDArray
 from cv2 import COLOR_BGR2RGB, cvtColor, imread
-
 from mypy_boto3_s3.client import S3Client
+from numpy import uint8
+from numpy.typing import NDArray
 
+from lambdas.process.dithering import DitheringStrategy
+from lambdas.process.dithering.utils import get_dithering_strategy
+from lambdas.process.utils import (
+    ascii_convert,
+    create_char_array,
+    get_ascii_dict,
+)
 from lambdas.utils.custom_types import (
     ImageExtension,
     MediaFile,
     R2Credentials,
 )
-from lambdas.process.utils import (
-    create_char_array,
-    get_ascii_dict,
-    ascii_convert,
-)
-from lambdas.process.dithering import DitheringStrategy
-from lambdas.process.dithering.utils import get_dithering_strategy
+from lambdas.utils.save_image import ImageCairo
 from lambdas.utils.utils import (
     download_from_s3,
     find_media_type,
+    get_r2_client,
     get_r2_credentials,
     split_file_name,
-    get_r2_client,
 )
-from lambdas.utils.save_image import ImageCairo
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -83,7 +80,8 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
 
     image: NDArray[uint8] = cast(
-        NDArray[uint8], cvtColor(imread(local_file), COLOR_BGR2RGB)
+        "NDArray[uint8]",
+        cvtColor(imread(local_file), COLOR_BGR2RGB),
     )
 
     height, width = image.shape[:2]
@@ -91,15 +89,18 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
 
     char_array = create_char_array(ascii_dict)
     ascii_image = ascii_convert(
-        image, char_array, dithering_strategy, output, edge_detection
+        image,
+        char_array,
+        dithering_strategy,
+        output,
+        edge_detection,
     )
     image_object: ImageCairo = ImageCairo(
-        ascii_image, ImageExtension(media_file.extension)
+        ascii_image,
+        ImageExtension(media_file.extension),
     )
     # TODO: fix, this line apply the postprocessing and save it to local file.
-    post_processed_local_file: str = (
-        f"/tmp/{random_id}/{media_file.file_name}_ascii.jpg"
-    )
+    post_processed_local_file: str = f"/tmp/{random_id}/{media_file.file_name}_ascii.jpg"
     output_dir = os.path.join("/tmp", random_id)
     if os.path.exists(output_dir):
         rmtree(output_dir)
@@ -149,5 +150,5 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     return {
         "statusCode": 200,
         "ascii_art_key": object_key,
-        "body": dumps(cast(dict[str, str], {"url": url})),
+        "body": dumps(cast("dict[str, str]", {"url": url})),
     }

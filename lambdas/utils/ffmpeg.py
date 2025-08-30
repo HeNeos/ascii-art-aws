@@ -1,7 +1,6 @@
+import pathlib
 import subprocess
 from uuid import uuid4
-
-import pathlib
 
 
 def get_video_framerate(video_path: str) -> float:
@@ -17,7 +16,12 @@ def get_video_framerate(video_path: str) -> float:
         "stream=r_frame_rate",
         f"{video_path}",
     ]
-    ffprobe_result = subprocess.run(ffprobe_command, capture_output=True, text=True)
+    ffprobe_result = subprocess.run(
+        ffprobe_command,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
     x, y = map(int, ffprobe_result.stdout.strip().split("/"))
     frame_rate: float = float(x / y)
     return frame_rate
@@ -37,7 +41,12 @@ def get_total_frames(video_path: str) -> int:
         "csv=p=0",
         f"{video_path}",
     ]
-    ffprobe_result = subprocess.run(ffprobe_command, capture_output=True, text=True)
+    ffprobe_result = subprocess.run(
+        ffprobe_command,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
     frames: int = int(ffprobe_result.stdout.strip())
     return frames
 
@@ -53,10 +62,16 @@ def get_video_resolution(video_path: str) -> tuple[int, int]:
         "csv=s=x:p=0",
         video_path,
     ]
-    ffprobe_result = subprocess.run(ffprobe_command, capture_output=True, text=True)
+    ffprobe_result = subprocess.run(
+        ffprobe_command,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
     video_width, video_height = map(
-        int, ffprobe_result.stdout.strip().split()[0].split("x")
+        int,
+        ffprobe_result.stdout.strip().split()[0].split("x"),
     )
     return video_width, video_height
 
@@ -129,8 +144,7 @@ def merge_videos(video_files: list[str], output_path: str) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"
     with open(concat_file, "w") as f:
-        for video_file in video_files:
-            f.write(f"file '{video_file}'\n")
+        f.writelines(f"file '{video_file}'\n" for video_file in video_files)
 
     command = [
         "ffmpeg",
@@ -154,7 +168,10 @@ def merge_videos(video_files: list[str], output_path: str) -> None:
 
 
 def merge_frames(
-    frames_filename: list[str], frame_rate: float, output_path: str, crf: int = 29
+    frames_filename: list[str],
+    frame_rate: float,
+    output_path: str,
+    crf: int = 29,
 ) -> None:
     random_id = uuid4()
     concat_file = f"/tmp/concat_list-{random_id}.txt"
@@ -205,13 +222,19 @@ def get_video_length(video_path: str) -> float:
         video_path,
     ]
     video_length: str = subprocess.run(
-        ffmpeg_command, capture_output=True, text=True
+        ffmpeg_command,
+        check=False,
+        capture_output=True,
+        text=True,
     ).stdout.strip()
     return float(video_length)
 
 
 def trim_video(
-    video_path: str, start_time: str, duration: str | None, output_path: str
+    video_path: str,
+    start_time: str,
+    duration: str | None,
+    output_path: str,
 ) -> None:
     ffmpeg_command = [
         "ffmpeg",

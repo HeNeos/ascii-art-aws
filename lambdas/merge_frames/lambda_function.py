@@ -1,21 +1,21 @@
 import json
 import logging
 import os
+from time import time
 from typing import TypedDict, cast
 
 import boto3
 from mypy_boto3_s3 import S3Client
-from time import time
 
 from lambdas.utils.custom_types import R2Credentials
 from lambdas.utils.ffmpeg import add_audio_to_video, merge_videos
+from lambdas.utils.save import save_video
 from lambdas.utils.utils import (
     download_from_s3,
-    split_file_name,
-    get_r2_credentials,
     get_r2_client,
+    get_r2_credentials,
+    split_file_name,
 )
-from lambdas.utils.save import save_video
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -119,5 +119,5 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     return {
         "statusCode": 200,
         "ascii_art_key": video_key,
-        "body": json.dumps(cast(dict[str, str], {"url": url})),
+        "body": json.dumps(cast("dict[str, str]", {"url": url})),
     }

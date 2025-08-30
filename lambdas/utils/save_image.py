@@ -1,14 +1,15 @@
 import io
 import logging
-
-from cairo import ImageSurface, FORMAT_ARGB32, FORMAT_RGB24
-from lambdas.utils.custom_types import ImageExtension
-from mypy_boto3_s3.client import S3Client
-from numpy import uint8, ndarray
-from numpy.typing import NDArray
-from cv2 import cvtColor, COLOR_BGRA2BGR, imwrite, IMWRITE_JPEG_QUALITY
-from lambdas.process.post_processing.utils import apply_post_processing
 from typing import cast
+
+from cairo import FORMAT_ARGB32, FORMAT_RGB24, ImageSurface
+from cv2 import COLOR_BGRA2BGR, IMWRITE_JPEG_QUALITY, cvtColor, imwrite
+from mypy_boto3_s3.client import S3Client
+from numpy import ndarray, uint8
+from numpy.typing import NDArray
+
+from lambdas.process.post_processing.utils import apply_post_processing
+from lambdas.utils.custom_types import ImageExtension
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -39,7 +40,7 @@ class ImageCairo:
                 buffer=self.image.get_data(),
                 strides=(self.image.get_stride(), 4, 1),
             )
-            image_bgr = cast(NDArray[uint8], cvtColor(cairo_data_bgra, COLOR_BGRA2BGR))
+            image_bgr = cast("NDArray[uint8]", cvtColor(cairo_data_bgra, COLOR_BGRA2BGR))
         elif self.surface_format == FORMAT_RGB24:
             cairo_data_bgrx: NDArray[uint8] = ndarray(
                 shape=(self.height, self.width, 4),

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 import numpy as np
 import numpy.typing as npt
 from numba import njit
@@ -95,9 +96,7 @@ def hilbert_level_1(
     direction_changes: list[int] = direction_movements[direction - 1]
     for change in direction_changes:
         dir_array[0] = change
-        move_and_dither(
-            img, img_width, img_height, weights, pos, dir_array, error_array
-        )
+        move_and_dither(img, img_width, img_height, weights, pos, dir_array, error_array)
 
 
 @njit(
@@ -128,7 +127,14 @@ def hilbert_level(
     direction_changes: list[int] = direction_movements[direction - 1]
     if level == 1:
         hilbert_level_1(
-            direction, img, img_width, img_height, weights, pos, dir_array, error_array
+            direction,
+            img,
+            img_width,
+            img_height,
+            weights,
+            pos,
+            dir_array,
+            error_array,
         )
     else:
         for i in range(3):
@@ -145,7 +151,13 @@ def hilbert_level(
             )
             dir_array[0] = direction_changes[i]
             move_and_dither(
-                img, img_width, img_height, weights, pos, dir_array, error_array
+                img,
+                img_width,
+                img_height,
+                weights,
+                pos,
+                dir_array,
+                error_array,
             )
         hilbert_level(
             level - 1,
@@ -172,7 +184,8 @@ class DitheringRiemersma(DitheringStrategy):
         cache=True,
     )
     def dithering(
-        image_array: npt.NDArray[np.float64], quantization_levels: int
+        image_array: npt.NDArray[np.float64],
+        quantization_levels: int,
     ) -> npt.NDArray[np.float64]:
         height: int = image_array.shape[0]
         width: int = image_array.shape[1]
@@ -196,20 +209,25 @@ class DitheringRiemersma(DitheringStrategy):
         else:
             level = int(np.ceil(np.log2(float(largest_side))))
 
-        if level < 1:
-            level = 1
+        level = max(level, 1)
 
         pos = np.zeros(2, dtype=np.int64)
         dir_array = np.zeros(1, dtype=np.int64)
         error_array = np.zeros(SIZE, dtype=np.float64)
 
         hilbert_level(
-            level, 1, image_array, width, height, weights, pos, dir_array, error_array
+            level,
+            1,
+            image_array,
+            width,
+            height,
+            weights,
+            pos,
+            dir_array,
+            error_array,
         )
 
         dir_array[0] = 0
-        move_and_dither(
-            image_array, width, height, weights, pos, dir_array, error_array
-        )
+        move_and_dither(image_array, width, height, weights, pos, dir_array, error_array)
 
         return np.clip(image_array, 0.0, 255.0)

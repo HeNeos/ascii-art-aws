@@ -15,8 +15,8 @@ from lambdas.utils.ffmpeg import (
     trim_video,
 )
 from lambdas.utils.font import Font
-from lambdas.utils.utils import download_from_s3, find_media_type
 from lambdas.utils.save import save_video
+from lambdas.utils.utils import download_from_s3, find_media_type
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -67,7 +67,10 @@ def save_split_video(video_metadata: SplittedVideo) -> str:
     folder_name = f"{video_metadata.random_id}/{video_metadata.video_name}/{video_metadata.video_name}"  # noqa: 501
     key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"  # noqa: 501
     return save_video(
-        s3_client, bucket_name, video_metadata.local_path, f"processed/{key}"
+        s3_client,
+        bucket_name,
+        video_metadata.local_path,
+        f"processed/{key}",
     )
 
 
@@ -93,7 +96,7 @@ def split_video(video_path: str, media_file: VideoFile) -> list[str]:
                 video_name=media_file.file_name,
                 video_extension=media_file.extension,
                 random_id=media_file.random_id,
-            )
+            ),
         )
         if end_time == -1:
             break
@@ -113,7 +116,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         return {"warmed": True}
     file_path: str = event["key"]
 
-    video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
+    video_file: VideoFile = cast("VideoFile", find_media_type(file_path))
 
     response: dict | None = dynamo_client.get_item(
         TableName=STATUS_TABLE_NAME,
@@ -142,7 +145,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         downsize_height
         * video_width
         * (Font.Height.value / Font.Width.value)
-        / video_height
+        / video_height,
     )
 
     if downsize_width % 2 == 1:

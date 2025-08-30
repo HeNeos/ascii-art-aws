@@ -20,7 +20,8 @@ class DitheringFloydSteinberg(DitheringStrategy):
         cache=True,
     )
     def dithering(
-        image_array: npt.NDArray[np.float64], quantization_levels: int
+        image_array: npt.NDArray[np.float64],
+        quantization_levels: int,
     ) -> npt.NDArray[np.float64]:
         height: int = image_array.shape[0]
         width: int = image_array.shape[1]

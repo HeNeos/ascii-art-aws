@@ -1,18 +1,18 @@
-import os
 import json
-import boto3
-
+import os
 from typing import no_type_check
+
+import boto3
 from mypy_boto3_s3.client import S3Client
 
 from lambdas.utils.custom_types import (
     ImageExtension,
     ImageFile,
     MediaFile,
+    R2Credentials,
     VideoExtension,
     VideoFile,
 )
-from lambdas.utils.custom_types import R2Credentials
 
 
 def split_file_name(file_path: str) -> tuple[str, str, str]:
@@ -27,8 +27,7 @@ def find_media_type(file_path: str) -> MediaFile:
     if file_extension in ImageExtension._value2member_map_:
         if ImageExtension(file_extension) is ImageExtension.JPG:
             return ImageFile(file_name, ImageExtension.JPEG, random_id)
-        else:
-            return ImageFile(file_name, ImageExtension(file_extension), random_id)
+        return ImageFile(file_name, ImageExtension(file_extension), random_id)
     if file_extension in VideoExtension._value2member_map_:
         return VideoFile(file_name, VideoExtension(file_extension), random_id)
 

@@ -1,12 +1,12 @@
 import logging
 import os
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import boto3
 
 from lambdas.utils.custom_types import VideoFile
-from lambdas.utils.utils import download_from_s3, find_media_type
 from lambdas.utils.ffmpeg import extract_audio
+from lambdas.utils.utils import download_from_s3, find_media_type
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,19 +24,33 @@ class LambdaEvent(TypedDict):
     warm: bool
 
 
-def lambda_handler(event: LambdaEvent, _: dict) -> dict:
+class LambdaResponse(TypedDict):
+    key: str
+    audio_bucket: str
+    audio_key: str
+    random_id: str
+
+
+class LambdaResponseWarm(TypedDict):
+    warmed: bool
+
+
+def lambda_handler(event: LambdaEvent, _: Any) -> LambdaResponse | LambdaResponseWarm:
     logger.info(event)
+
     if event.get("warm", None):
         return {"warmed": True}
+
     file_path: str = event["downsize_video"]
-    video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
+    video_file: VideoFile = cast("VideoFile", find_media_type(file_path))
     local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
 
-    audio_file_name = f"{video_file.file_name}-{video_file.random_id}"
+    audio_file_name: str = f"{video_file.file_name}-{video_file.random_id}"
     audio_path: str = f"/tmp/{audio_file_name}.mp3"
     extract_audio(local_file, audio_path)
 
-    if audio_path is None:  # TODO: check if audio_path has a size
+    # TODO: check if audio_path has a size
+    if audio_path is None:
         processed_key = ""
     else:
         processed_key = f"{audio_file_name}/audio.mp3"
