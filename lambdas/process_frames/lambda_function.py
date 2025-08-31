@@ -12,11 +12,11 @@ from cv2 import (
     VideoCapture,
     cvtColor,
 )
-from mypy_boto3_dynamodb import DynamoDBClient
 from mypy_boto3_s3.client import S3Client
 from numpy import str_, uint8
 from numpy.typing import NDArray
 
+from lambdas.clients.s3_client import AsciiArtS3Client
 from lambdas.models.media_file import (
     ImageExtension,
     MediaFile,
@@ -32,10 +32,8 @@ from lambdas.process.utils import (
 )
 from lambdas.process_frames.modules.frames import FrameData, Frames
 from lambdas.utils.ffmpeg import merge_frames
-from lambdas.utils.save import save_video
 from lambdas.utils.save_image import ImageCairo
 from lambdas.utils.utils import (
-    download_from_s3,
     find_media_type,
     get_r2_credentials,
     split_file_name,
@@ -44,14 +42,21 @@ from lambdas.utils.utils import (
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-s3_client: S3Client = boto3.client("s3")
-dynamo_client: DynamoDBClient = boto3.client("dynamodb")
-
 DEFAULT_DITHERING: str = os.environ["DEFAULT_DITHERING"]
 ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
 MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
 R2_SECRETS_BUCKET: str = os.environ["R2_SECRETS_BUCKET"]
-STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
+
+s3_client: S3Client = boto3.client("s3")
+ascii_art_ascii_s3_client: AsciiArtS3Client = AsciiArtS3Client(
+    s3_client=s3_client,
+    bucket_name=ASCII_ART_BUCKET,
+)
+ascii_art_media_s3_client: AsciiArtS3Client = AsciiArtS3Client(
+    s3_client=s3_client,
+    bucket_name=MEDIA_BUCKET,
+)
+
 
 r2_credentials: R2Credentials | None = None
 r2_client: S3Client | None = None
@@ -108,7 +113,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
     media_file: MediaFile = find_media_type(file_path)
-    local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
+    local_file: str = ascii_art_media_s3_client.download_to_local(s3_key=file_path)
 
     video_capture: VideoCapture = VideoCapture(local_file)
     width: int = int(video_capture.get(CAP_PROP_FRAME_WIDTH))
@@ -150,11 +155,9 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         output_path=video_path,
     )
     logger.info("Finish save local video")
-    key = save_video(
-        s3_client,
-        ASCII_ART_BUCKET,
-        video_path,
-        f"{random_id}/{video_name}/{media_file.file_name}_ascii.{media_file.extension.value}",  # noqa: 501
+    key: str = ascii_art_ascii_s3_client.save_from_local(
+        local_path=video_path,
+        key=f"{random_id}/{video_name}/{media_file.file_name}_ascii.{media_file.extension.value}",
     )
     return {
         "statusCode": 200,

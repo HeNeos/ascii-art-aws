@@ -2,7 +2,6 @@ import logging
 import os
 from json import dumps
 from shutil import rmtree
-from time import time
 from typing import TypedDict, cast
 
 import boto3
@@ -12,11 +11,14 @@ from mypy_boto3_s3.client import S3Client
 from numpy import uint8
 from numpy.typing import NDArray
 
+from lambdas.clients.dynamodb_client import AsciiArtDynamoDbClient
+from lambdas.clients.s3_client import AsciiArtS3Client
 from lambdas.models.media_file import (
     ImageExtension,
     MediaFile,
 )
 from lambdas.models.r2 import R2Credentials
+from lambdas.models.state_table import AsciiArtTableStatus
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.dithering.utils import get_dithering_strategy
 from lambdas.process.utils import (
@@ -26,9 +28,7 @@ from lambdas.process.utils import (
 )
 from lambdas.utils.save_image import ImageCairo
 from lambdas.utils.utils import (
-    download_from_s3,
     find_media_type,
-    get_r2_client,
     get_r2_credentials,
     split_file_name,
 )
@@ -36,17 +36,25 @@ from lambdas.utils.utils import (
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-s3_client: S3Client = boto3.client("s3")
-dynamo_client: DynamoDBClient = boto3.client("dynamodb")
-
 DEFAULT_DITHERING: str = os.environ["DEFAULT_DITHERING"]
 ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
 MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
 R2_SECRETS_BUCKET: str = os.environ["R2_SECRETS_BUCKET"]
 STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
 
+s3_client: S3Client = boto3.client("s3")
+ascii_art_media_s3_client: AsciiArtS3Client = AsciiArtS3Client(
+    s3_client=s3_client,
+    bucket_name=MEDIA_BUCKET,
+)
+dynamo_db_client: DynamoDBClient = boto3.client("dynamodb")
+ascii_dynamo_db_client: AsciiArtDynamoDbClient = AsciiArtDynamoDbClient(
+    dynamo_db_client,
+    STATUS_TABLE_NAME,
+)
+
+
 r2_credentials: R2Credentials | None = None
-r2_client: S3Client | None = None
 
 
 class LambdaEvent(TypedDict):
@@ -64,7 +72,6 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     if event.get("warm", None):
         return {"warmed": True}
     global r2_credentials
-    global r2_client
 
     if r2_credentials is None:
         r2_credentials = get_r2_credentials(s3_client, R2_SECRETS_BUCKET)
@@ -78,7 +85,7 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     edge_detection: bool = event.get("edge_detection", False)
 
     media_file: MediaFile = find_media_type(file_path)
-    local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
+    local_file: str = ascii_art_media_s3_client.download_to_local(s3_key=file_path)
 
     image: NDArray[uint8] = cast(
         "NDArray[uint8]",
@@ -113,28 +120,15 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         f"{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}"
     )
 
-    r2_client = get_r2_client(r2_credentials, r2_client)
-
-    with open(post_processed_local_file, "rb") as f:
-        r2_client.upload_fileobj(f, r2_credentials.ascii_art_bucket_name, object_key)
-
-    # key = image_object.save_image(
-    #     s3_client,
-    #     ASCII_ART_BUCKET,
-    #     f"{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}",
-    # )
-    # url: str = s3_client.generate_presigned_url(
-    #     "get_object",
-    #     Params={
-    #         "Bucket": ASCII_ART_BUCKET,
-    #         "Key": key,
-    #     },
-    #     ExpiresIn=300,
-    # )
-    url: str = get_r2_client(
+    ascii_art_r2_client: AsciiArtS3Client = AsciiArtS3Client.get_r2_client(
         credentials=r2_credentials,
-        r2_client=r2_client,
-    ).generate_presigned_url(
+    )
+    ascii_art_r2_client.save_from_local(
+        local_path=post_processed_local_file,
+        key=object_key,
+    )
+
+    url: str = ascii_art_r2_client.s3_client.generate_presigned_url(
         ClientMethod="get_object",
         Params={
             "Bucket": r2_credentials.ascii_art_bucket_name,
@@ -142,15 +136,13 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         },
         ExpiresIn=300,
     )
-    dynamo_client.put_item(
-        TableName=STATUS_TABLE_NAME,
-        Item={
-            "status": {"S": "FINISHED"},
-            "id": {"S": random_id},
-            "url": {"S": url},
-            "ttl": {"N": str(int(time() + 300))},
-        },
+
+    ascii_dynamo_db_client.put_item(
+        unique_id=random_id,
+        status=AsciiArtTableStatus.FINISHED,
+        url=url,
     )
+
     return {
         "statusCode": 200,
         "ascii_art_key": object_key,

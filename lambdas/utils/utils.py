@@ -1,7 +1,6 @@
 import json
 import os
 
-import boto3
 from mypy_boto3_s3.client import S3Client
 
 from lambdas.models.media_file import (
@@ -51,15 +50,3 @@ def get_r2_credentials(s3_client: S3Client, bucket_name: str) -> R2Credentials:
         r2_secret_access_key=json_object["r2_secret_access_key"],
         ascii_art_bucket_name=f"ascii-art-storage-{json_object['cloudflare_account_id']}",
     )
-
-
-def get_r2_client(credentials: R2Credentials, r2_client: S3Client | None) -> S3Client:
-    if r2_client is None:
-        r2_client = boto3.client(
-            "s3",
-            endpoint_url=f"https://{credentials.cloudflare_account_id}.r2.cloudflarestorage.com",
-            aws_access_key_id=credentials.r2_access_key_id,
-            aws_secret_access_key=credentials.r2_secret_access_key,
-            region_name="auto",
-        )
-    return r2_client

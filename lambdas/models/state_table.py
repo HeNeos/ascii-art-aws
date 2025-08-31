@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import TypedDict
 
@@ -7,8 +8,14 @@ class AsciiArtTableKeys(Enum):
     RANGE_KEY = "id"
 
 
-class AsciiArtTableItem(TypedDict):
-    status: str
+class AsciiArtTableStatus(Enum):
+    FINISHED = "FINISHED"
+    PENDING = "PENDING"
+
+
+@dataclass
+class AsciiArtTableItem:
+    status: AsciiArtTableStatus
     id: str
     dithering: str
     edge_detection: bool
