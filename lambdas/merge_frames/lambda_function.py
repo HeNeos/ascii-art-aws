@@ -5,6 +5,7 @@ from time import time
 from typing import TypedDict, cast
 
 import boto3
+from mypy_boto3_dynamodb import DynamoDBClient
 from mypy_boto3_s3.client import S3Client
 
 from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
@@ -22,7 +23,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 s3_client: S3Client = boto3.client("s3")
-dynamo_client = boto3.client("dynamodb")
+dynamo_client: DynamoDBClient = boto3.client("dynamodb")
 
 
 MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]

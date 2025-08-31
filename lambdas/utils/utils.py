@@ -1,6 +1,5 @@
 import json
 import os
-from typing import no_type_check
 
 import boto3
 from mypy_boto3_s3.client import S3Client
@@ -43,7 +42,7 @@ def download_from_s3(s3_client: S3Client, bucket_name: str, s3_key: str) -> str:
 
 def get_r2_credentials(s3_client: S3Client, bucket_name: str) -> R2Credentials:
     response = s3_client.get_object(Bucket=bucket_name, Key="r2_secrets.json")
-    json_content = response["Body"].read().decode("utf-8")
+    json_content: str = response["Body"].read().decode("utf-8")
     json_object = json.loads(json_content)
 
     return R2Credentials(
@@ -54,7 +53,6 @@ def get_r2_credentials(s3_client: S3Client, bucket_name: str) -> R2Credentials:
     )
 
 
-@no_type_check
 def get_r2_client(credentials: R2Credentials, r2_client: S3Client | None) -> S3Client:
     if r2_client is None:
         r2_client = boto3.client(

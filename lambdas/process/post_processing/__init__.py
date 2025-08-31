@@ -19,7 +19,7 @@ class PostProcessingStrategy(ABC):
 
     @abstractmethod
     def apply(self, image: NDArray[uint8], value: float) -> NDArray[uint8]:
-        """Applies a post-processing effect to an image.
+        """Apply a post-processing effect to an image.
 
         Args:
             image: The input image as a NumPy array (BGR format).

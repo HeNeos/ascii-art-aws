@@ -13,7 +13,7 @@ class Exposure(PostProcessingStrategy):
     name: PostProcessingStrategyName = PostProcessingStrategyName.EXPOSURE
 
     def apply(self, image: NDArray[uint8], value: float) -> NDArray[uint8]:
-        """Adjusts the exposure of an image using gamma correction.
+        """Adjust the exposure of an image using gamma correction.
         value: float, gamma value. >1 makes it darker, <1 makes it brighter. e.g., 0.5
         """
         if value <= 0:

@@ -7,6 +7,7 @@ from typing import TypedDict, cast
 
 import boto3
 from cv2 import COLOR_BGR2RGB, cvtColor, imread
+from mypy_boto3_dynamodb import DynamoDBClient
 from mypy_boto3_s3.client import S3Client
 from numpy import uint8
 from numpy.typing import NDArray
@@ -36,7 +37,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 s3_client: S3Client = boto3.client("s3")
-dynamo_client = boto3.client("dynamodb")
+dynamo_client: DynamoDBClient = boto3.client("dynamodb")
 
 DEFAULT_DITHERING: str = os.environ["DEFAULT_DITHERING"]
 ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
@@ -153,5 +154,5 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     return {
         "statusCode": 200,
         "ascii_art_key": object_key,
-        "body": dumps(cast("dict[str, str]", {"url": url})),
+        "body": dumps({"url": url}),
     }

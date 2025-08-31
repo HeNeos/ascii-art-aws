@@ -3,6 +3,7 @@ import os
 from typing import TypedDict, cast
 
 import boto3
+from mypy_boto3_s3.client import S3Client
 
 from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
 from lambdas.models.media_file import VideoFile
@@ -11,8 +12,8 @@ from lambdas.utils.utils import download_from_s3, find_media_type
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-s3_client = boto3.client("s3")
 
+s3_client: S3Client = boto3.client("s3")
 
 AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
@@ -57,7 +58,7 @@ def lambda_handler(
     else:
         processed_key = f"{audio_file_name}/audio.mp3"
         with open(audio_path, "rb") as f:
-            s3_client.upload_fileobj(f, AUDIO_BUCKET, processed_key)
+            s3_client.upload_fileobj(Fileobj=f, Bucket=AUDIO_BUCKET, Key=processed_key)
 
     return {
         "key": event["key"],

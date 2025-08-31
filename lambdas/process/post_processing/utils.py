@@ -11,8 +11,8 @@ from . import PostProcessingStrategy
 class PostProcessingLoader:
     @staticmethod
     def _get_module_and_class(strategy_name: str) -> tuple[str, str]:
-        module_name = f".{strategy_name}"
-        class_name = strategy_name.capitalize()
+        module_name: str = f".{strategy_name}"
+        class_name: str = strategy_name.capitalize()
         return module_name, class_name
 
     @staticmethod
@@ -39,9 +39,9 @@ def apply_post_processing(image: NDArray[uint8]) -> NDArray[uint8]:
         "exposure": 1.18,
     }
 
-    for filter, value in post_processing_parameters.items():
+    for filter_name, value in post_processing_parameters.items():
         filter_strategy: PostProcessingStrategy | None = get_post_processing_strategy(
-            filter,
+            filter_name,
         )
         if filter_strategy:
             image = filter_strategy.apply(image, value)

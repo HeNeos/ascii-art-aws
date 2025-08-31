@@ -13,7 +13,7 @@ class Brightness(PostProcessingStrategy):
     name: PostProcessingStrategyName = PostProcessingStrategyName.BRIGHTNESS
 
     def apply(self, image: NDArray[uint8], value: float) -> NDArray[uint8]:
-        """Adjusts the brightness of an image."""
+        """Adjust the brightness of an image."""
         hsv: NDArray[uint8] = cast("NDArray[uint8]", cvtColor(image, COLOR_BGR2HSV))
         h, s, v = split(hsv)
 

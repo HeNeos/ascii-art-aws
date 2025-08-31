@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, TypedDict, cast
+from typing import TypedDict, cast
 
 import boto3
 from cv2 import (
@@ -10,6 +10,7 @@ from cv2 import (
     imread,
     resize,
 )
+from mypy_boto3_dynamodb import DynamoDBClient
 from mypy_boto3_s3.client import S3Client
 from numpy import uint8
 from numpy.typing import NDArray
@@ -17,12 +18,14 @@ from numpy.typing import NDArray
 from lambdas.models.font import Font
 from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
 from lambdas.models.media_file import ImageFile
+from lambdas.models.state_table import AsciiArtTableItemResponse
 from lambdas.utils.utils import download_from_s3, find_media_type
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
 s3_client: S3Client = boto3.client("s3")
-dynamo_client = boto3.client("dynamodb")
+dynamo_client: DynamoDBClient = boto3.client("dynamodb")
 
 MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
 STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
@@ -64,7 +67,7 @@ def rescale_image(image: NDArray[uint8], height_to_resize: int) -> NDArray[uint8
 
 def lambda_handler(
     event: LambdaEvent | LambdaEventWarm,
-    _: Any,
+    _: None,
 ) -> LambdaResponse | LambdaResponseWarm:
     logger.info(event)
 
@@ -78,24 +81,25 @@ def lambda_handler(
 
     image_file: ImageFile = cast("ImageFile", find_media_type(file_path))
 
-    response: dict | None = dynamo_client.get_item(
+    response = dynamo_client.get_item(
         TableName=STATUS_TABLE_NAME,
         Key={"id": {"S": image_file.random_id}, "status": {"S": "PENDING"}},
-    ).get("Item")
+    )
 
-    if response is None:
+    item: AsciiArtTableItemResponse | None = response.get("Item")
+    if item is None:
         raise ValueError("No item found in DynamoDB")
 
-    resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
-    dithering: str = response["dithering"]["S"]
-    edge_detection: bool = response["edge_detection"]["BOOL"]
-    output: str = response["output"]["S"]
+    resolution: int = min(int(item["resolution"]["S"]), MAX_HEIGHT)
+    dithering: str = item["dithering"]["S"]
+    edge_detection: bool = item["edge_detection"]["BOOL"]
+    output: str = item["output"]["S"]
 
     local_file: str = download_from_s3(s3_client, bucket_name, file_path)
     image: NDArray[uint8] = cast("NDArray[uint8]", imread(local_file))
 
-    resized_image = rescale_image(image, resolution)
-    resized_image_name = f"{image_file.random_id}/{image_file.file_name}_resized.jpg"
+    resized_image: NDArray[uint8] = rescale_image(image, resolution)
+    resized_image_name: str = f"{image_file.random_id}/{image_file.file_name}_resized.jpg"
     success, encoded_image_buffer = imencode(
         ".jpg",
         resized_image,

@@ -12,6 +12,7 @@ from cv2 import (
     VideoCapture,
     cvtColor,
 )
+from mypy_boto3_dynamodb import DynamoDBClient
 from mypy_boto3_s3.client import S3Client
 from numpy import str_, uint8
 from numpy.typing import NDArray
@@ -43,8 +44,8 @@ from lambdas.utils.utils import (
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-s3_client = boto3.client("s3")
-dynamo_client = boto3.client("dynamodb")
+s3_client: S3Client = boto3.client("s3")
+dynamo_client: DynamoDBClient = boto3.client("dynamodb")
 
 DEFAULT_DITHERING: str = os.environ["DEFAULT_DITHERING"]
 ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]

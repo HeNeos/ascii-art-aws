@@ -6,10 +6,13 @@ from typing import Any, TypedDict, cast
 
 import boto3
 from lambda_multiprocessing import Pool
+from mypy_boto3_dynamodb import DynamoDBClient
+from mypy_boto3_s3.client import S3Client
 
 from lambdas.models.font import Font
 from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
 from lambdas.models.media_file import VideoExtension, VideoFile
+from lambdas.models.state_table import AsciiArtTableItemResponse
 from lambdas.utils.ffmpeg import (
     get_video_length,
     get_video_resolution,
@@ -21,14 +24,14 @@ from lambdas.utils.utils import download_from_s3, find_media_type
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-s3_client = boto3.client("s3")
-dynamo_client = boto3.client("dynamodb")
 
+s3_client: S3Client = boto3.client("s3")
+dynamo_client: DynamoDBClient = boto3.client("dynamodb")
 
 bucket_name: str = os.environ["MEDIA_BUCKET"]
 STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
-
 MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
+
 downsize_video_path: str | None = None
 
 
@@ -68,6 +71,8 @@ def convert_time(t: int) -> str:
 
 
 def save_split_video(video_metadata: SplittedVideo) -> str:
+    global downsize_video_path
+
     if downsize_video_path is None:
         return ""
 
@@ -78,13 +83,14 @@ def save_split_video(video_metadata: SplittedVideo) -> str:
         video_metadata.local_path,
     )
 
-    folder_name = f"{video_metadata.random_id}/{video_metadata.video_name}/{video_metadata.video_name}"  # noqa: 501
-    key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"  # noqa: 501
+    folder_name: str = f"{video_metadata.random_id}/{video_metadata.video_name}/{video_metadata.video_name}"
+    key: str = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
+
     return save_video(
-        s3_client,
-        bucket_name,
-        video_metadata.local_path,
-        f"processed/{key}",
+        s3_client=s3_client,
+        bucket_name=bucket_name,
+        local_video_path=video_metadata.local_path,
+        key=f"processed/{key}",
     )
 
 
@@ -139,23 +145,28 @@ def lambda_handler(
     file_path: str = event["key"]
     video_file: VideoFile = cast("VideoFile", find_media_type(file_path))
 
-    response: dict | None = dynamo_client.get_item(
+    response = dynamo_client.get_item(
         TableName=STATUS_TABLE_NAME,
         Key={"id": {"S": video_file.random_id}, "status": {"S": "PENDING"}},
-    ).get("Item")
+    )
 
-    if response is None:
+    item: AsciiArtTableItemResponse | None = response.get("Item")
+    if item is None:
         raise ValueError("No item found in DynamoDB")
 
-    resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
-    dithering: str = response["dithering"]["S"]
-    edge_detection: bool = response["edge_detection"]["BOOL"]
-    # output: str = response["dithering"]["S"]
+    resolution: int = min(int(item["resolution"]["S"]), MAX_HEIGHT)
+    dithering: str = item["dithering"]["S"]
+    edge_detection: bool = item["edge_detection"]["BOOL"]
+    # output: str = item["dithering"]["S"]
     output: str = "COLOR"
 
-    local_file: str = download_from_s3(s3_client, bucket_name, file_path)
+    local_file: str = download_from_s3(
+        s3_client=s3_client,
+        bucket_name=bucket_name,
+        s3_key=file_path,
+    )
 
-    video_width, video_height = get_video_resolution(local_file)
+    video_width, video_height = get_video_resolution(video_path=local_file)
     new_width: int = int(video_width * resolution / video_height)
     if new_width % 2 == 1:
         new_width += 1
@@ -172,20 +183,25 @@ def lambda_handler(
     if downsize_width % 2 == 1:
         downsize_width += 1
 
-    downsize_video_path: str = (
+    downsize_video_path = (
         f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}"
     )
-    resize_video(local_file, downsize_width, downsize_height, downsize_video_path)
+    resize_video(
+        video_path=local_file,
+        width=downsize_width,
+        height=downsize_height,
+        output_path=downsize_video_path,
+    )
 
     video_folder_name: str = (
         f"{video_file.random_id}/{video_file.file_name}/{video_file.file_name}"
     )
 
     downsize_video_key: str = save_video(
-        s3_client,
-        bucket_name,
-        f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
-        f"processed/{video_folder_name}-downsize.{video_file.extension.value}",
+        s3_client=s3_client,
+        bucket_name=bucket_name,
+        local_video_path=f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
+        key=f"processed/{video_folder_name}-downsize.{video_file.extension.value}",
     )
 
     processed_key: list[str] = split_video(
