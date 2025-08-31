@@ -5,14 +5,14 @@ from typing import no_type_check
 import boto3
 from mypy_boto3_s3.client import S3Client
 
-from lambdas.utils.custom_types import (
+from lambdas.models.media_file import (
     ImageExtension,
     ImageFile,
     MediaFile,
-    R2Credentials,
     VideoExtension,
     VideoFile,
 )
+from lambdas.models.r2 import R2Credentials
 
 
 def split_file_name(file_path: str) -> tuple[str, str, str]:

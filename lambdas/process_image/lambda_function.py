@@ -11,17 +11,17 @@ from mypy_boto3_s3.client import S3Client
 from numpy import uint8
 from numpy.typing import NDArray
 
+from lambdas.models.media_file import (
+    ImageExtension,
+    MediaFile,
+)
+from lambdas.models.r2 import R2Credentials
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.dithering.utils import get_dithering_strategy
 from lambdas.process.utils import (
     ascii_convert,
     create_char_array,
     get_ascii_dict,
-)
-from lambdas.utils.custom_types import (
-    ImageExtension,
-    MediaFile,
-    R2Credentials,
 )
 from lambdas.utils.save_image import ImageCairo
 from lambdas.utils.utils import (
@@ -130,8 +130,11 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     #     },
     #     ExpiresIn=300,
     # )
-    url: str = get_r2_client(r2_credentials, r2_client).generate_presigned_url(
-        "get_object",
+    url: str = get_r2_client(
+        credentials=r2_credentials,
+        r2_client=r2_client,
+    ).generate_presigned_url(
+        ClientMethod="get_object",
         Params={
             "Bucket": r2_credentials.ascii_art_bucket_name,
             "Key": object_key,

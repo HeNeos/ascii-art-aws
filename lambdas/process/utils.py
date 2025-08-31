@@ -19,12 +19,12 @@ from numpy import (
 )
 from numpy.typing import NDArray
 
+from lambdas.models.font import Font
+from lambdas.models.media_file import AsciiColors, AsciiImage
 from lambdas.process.ascii_dict import AsciiDict, AsciiDictEdges, display_formats
 from lambdas.process.canvas_context.cairo_context import CairoContextFactory
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.edge_detection import EdgeDetection
-from lambdas.utils.custom_types import AsciiColors, AsciiImage
-from lambdas.utils.font import Font
 
 _initialized: bool = False
 face: FontFace | None = None

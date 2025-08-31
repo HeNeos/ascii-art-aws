@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import boto3
 from cv2 import (
@@ -14,8 +14,9 @@ from mypy_boto3_s3.client import S3Client
 from numpy import uint8
 from numpy.typing import NDArray
 
-from lambdas.utils.custom_types import ImageFile
-from lambdas.utils.font import Font
+from lambdas.models.font import Font
+from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
+from lambdas.models.media_file import ImageFile
 from lambdas.utils.utils import download_from_s3, find_media_type
 
 logger = logging.getLogger()
@@ -33,6 +34,19 @@ class LambdaEvent(TypedDict):
     warm: bool
 
 
+class LambdaResponse(TypedDict):
+    key: str
+    is_video: bool
+    is_image: bool
+    bucket_name: str
+    processed_key: str
+    random_id: str
+    dithering: str
+    edge_detection: bool
+    resolution: int
+    output: str
+
+
 def rescale_image(image: NDArray[uint8], height_to_resize: int) -> NDArray[uint8]:
     height, width = image.shape[:2]
 
@@ -48,10 +62,17 @@ def rescale_image(image: NDArray[uint8], height_to_resize: int) -> NDArray[uint8
     return resized_image
 
 
-def lambda_handler(event: LambdaEvent, _: dict) -> dict:
+def lambda_handler(
+    event: LambdaEvent | LambdaEventWarm,
+    _: Any,
+) -> LambdaResponse | LambdaResponseWarm:
     logger.info(event)
+
     if event.get("warm", None):
         return {"warmed": True}
+
+    event = cast("LambdaEvent", event)
+
     file_path: str = event["key"]
     bucket_name: str = event["bucket_name"]
 
@@ -80,8 +101,10 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         resized_image,
         [IMWRITE_JPEG_QUALITY, 90],
     )
+
     if not success:
         raise ValueError("Error: Failed to encode resized image")
+
     image_bytes = encoded_image_buffer.tobytes()
     s3_client.put_object(
         Bucket=bucket_name,

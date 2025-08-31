@@ -2,19 +2,20 @@ import logging
 import os
 from dataclasses import dataclass
 from multiprocessing import cpu_count
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import boto3
 from lambda_multiprocessing import Pool
 
-from lambdas.utils.custom_types import VideoExtension, VideoFile
+from lambdas.models.font import Font
+from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
+from lambdas.models.media_file import VideoExtension, VideoFile
 from lambdas.utils.ffmpeg import (
     get_video_length,
     get_video_resolution,
     resize_video,
     trim_video,
 )
-from lambdas.utils.font import Font
 from lambdas.utils.save import save_video
 from lambdas.utils.utils import download_from_s3, find_media_type
 
@@ -35,6 +36,19 @@ class LambdaEvent(TypedDict):
     key: str
     resolution: str
     warm: bool
+
+
+class LambdaResponse(TypedDict):
+    key: str
+    is_video: bool
+    is_image: bool
+    downsize_video: str
+    processed_key: list[str]
+    random_id: str
+    dithering: str
+    edge_detection: bool
+    resolution: int
+    output: str
 
 
 @dataclass
@@ -109,13 +123,20 @@ def split_video(video_path: str, media_file: VideoFile) -> list[str]:
     return processed_keys
 
 
-def lambda_handler(event: LambdaEvent, _: dict) -> dict:
+def lambda_handler(
+    event: LambdaEvent | LambdaEventWarm,
+    _: Any,
+) -> LambdaResponse | LambdaResponseWarm:
     global downsize_video_path
+
     logger.info(event)
+
     if event.get("warm", None):
         return {"warmed": True}
-    file_path: str = event["key"]
 
+    event = cast("LambdaEvent", event)
+
+    file_path: str = event["key"]
     video_file: VideoFile = cast("VideoFile", find_media_type(file_path))
 
     response: dict | None = dynamo_client.get_item(
@@ -151,23 +172,26 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     if downsize_width % 2 == 1:
         downsize_width += 1
 
-    downsize_video_path = (
+    downsize_video_path: str = (
         f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}"
     )
     resize_video(local_file, downsize_width, downsize_height, downsize_video_path)
 
-    video_folder_name = (
+    video_folder_name: str = (
         f"{video_file.random_id}/{video_file.file_name}/{video_file.file_name}"
     )
 
-    downsize_video_key = save_video(
+    downsize_video_key: str = save_video(
         s3_client,
         bucket_name,
         f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
         f"processed/{video_folder_name}-downsize.{video_file.extension.value}",
     )
 
-    processed_key = split_video(downsize_video_path, video_file)
+    processed_key: list[str] = split_video(
+        video_path=downsize_video_path,
+        media_file=video_file,
+    )
 
     return {
         "key": file_path,

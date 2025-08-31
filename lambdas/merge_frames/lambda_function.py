@@ -5,9 +5,10 @@ from time import time
 from typing import TypedDict, cast
 
 import boto3
-from mypy_boto3_s3 import S3Client
+from mypy_boto3_s3.client import S3Client
 
-from lambdas.utils.custom_types import R2Credentials
+from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
+from lambdas.models.r2 import R2Credentials
 from lambdas.utils.ffmpeg import add_audio_to_video, merge_videos
 from lambdas.utils.save import save_video
 from lambdas.utils.utils import (
@@ -42,15 +43,31 @@ class LambdaEvent(TypedDict):
     warm: bool
 
 
-def lambda_handler(event: LambdaEvent, _: dict) -> dict:
-    logger.info(event)
-    if event.get("warm", None):
-        return {"warmed": True}
+class LambdaResponse(TypedDict):
+    statusCode: int
+    ascii_art_key: str
+    body: str
+
+
+def lambda_handler(
+    event: LambdaEvent | LambdaEventWarm,
+    _: None,
+) -> LambdaResponse | LambdaResponseWarm:
     global r2_credentials
     global r2_client
 
+    logger.info(event)
+
+    if event.get("warm", None):
+        return {"warmed": True}
+
+    event = cast("LambdaEvent", event)
+
     if r2_credentials is None:
-        r2_credentials = get_r2_credentials(s3_client, R2_SECRETS_BUCKET)
+        r2_credentials = get_r2_credentials(
+            s3_client=s3_client,
+            bucket_name=R2_SECRETS_BUCKET,
+        )
 
     initial_key: str = event["key"]
     audio_key: str = event["audio_key"]
@@ -64,15 +81,22 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
 
     video_name, video_extension, random_id = split_file_name(initial_key)
 
-    merged_video_path = f"/tmp/video_merged-{random_id}.{video_extension}"
+    merged_video_path: str = f"/tmp/video_merged-{random_id}.{video_extension}"
     merge_videos(videos_local_path, merged_video_path)
 
+    final_video_path: str = merged_video_path
     if has_audio:
-        audio_local_path: str = download_from_s3(s3_client, AUDIO_BUCKET, audio_key)
+        audio_local_path: str = download_from_s3(
+            s3_client,
+            bucket_name=AUDIO_BUCKET,
+            s3_key=audio_key,
+        )
         final_video_path = f"/tmp/video_with_audio-{random_id}.{video_extension}"
-        add_audio_to_video(merged_video_path, audio_local_path, final_video_path)
-    else:
-        final_video_path = merged_video_path
+        add_audio_to_video(
+            video_path=merged_video_path,
+            audio_path=audio_local_path,
+            output_path=final_video_path,
+        )
 
         # video_key = save_video(
         #     s3_client,
@@ -90,15 +114,18 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         #     ExpiresIn=300,
         # )
 
-    video_key = save_video(
-        get_r2_client(r2_credentials, r2_client),
-        r2_credentials.ascii_art_bucket_name,
-        final_video_path,
-        f"{random_id}/{video_name}/{video_name}_ascii.{video_extension}",
+    video_key: str = save_video(
+        s3_client=get_r2_client(credentials=r2_credentials, r2_client=r2_client),
+        bucket_name=r2_credentials.ascii_art_bucket_name,
+        local_video_path=final_video_path,
+        key=f"{random_id}/{video_name}/{video_name}_ascii.{video_extension}",
     )
 
-    url: str = get_r2_client(r2_credentials, r2_client).generate_presigned_url(
-        "get_object",
+    url: str = get_r2_client(
+        credentials=r2_credentials,
+        r2_client=r2_client,
+    ).generate_presigned_url(
+        ClientMethod="get_object",
         Params={
             "Bucket": r2_credentials.ascii_art_bucket_name,
             "Key": video_key,
@@ -119,5 +146,5 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     return {
         "statusCode": 200,
         "ascii_art_key": video_key,
-        "body": json.dumps(cast("dict[str, str]", {"url": url})),
+        "body": json.dumps({"url": url}),
     }

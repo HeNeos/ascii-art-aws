@@ -16,6 +16,12 @@ from mypy_boto3_s3.client import S3Client
 from numpy import str_, uint8
 from numpy.typing import NDArray
 
+from lambdas.models.media_file import (
+    ImageExtension,
+    MediaFile,
+    VideoFile,
+)
+from lambdas.models.r2 import R2Credentials
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.dithering.utils import get_dithering_strategy
 from lambdas.process.utils import (
@@ -24,12 +30,6 @@ from lambdas.process.utils import (
     get_ascii_dict,
 )
 from lambdas.process_frames.modules.frames import FrameData, Frames
-from lambdas.utils.custom_types import (
-    ImageExtension,
-    MediaFile,
-    R2Credentials,
-    VideoFile,
-)
 from lambdas.utils.ffmpeg import merge_frames
 from lambdas.utils.save import save_video
 from lambdas.utils.save_image import ImageCairo

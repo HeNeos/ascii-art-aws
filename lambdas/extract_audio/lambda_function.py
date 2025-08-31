@@ -1,10 +1,11 @@
 import logging
 import os
-from typing import Any, TypedDict, cast
+from typing import TypedDict, cast
 
 import boto3
 
-from lambdas.utils.custom_types import VideoFile
+from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
+from lambdas.models.media_file import VideoFile
 from lambdas.utils.ffmpeg import extract_audio
 from lambdas.utils.utils import download_from_s3, find_media_type
 
@@ -31,15 +32,16 @@ class LambdaResponse(TypedDict):
     random_id: str
 
 
-class LambdaResponseWarm(TypedDict):
-    warmed: bool
-
-
-def lambda_handler(event: LambdaEvent, _: Any) -> LambdaResponse | LambdaResponseWarm:
+def lambda_handler(
+    event: LambdaEvent | LambdaEventWarm,
+    _: None,
+) -> LambdaResponse | LambdaResponseWarm:
     logger.info(event)
 
     if event.get("warm", None):
         return {"warmed": True}
+
+    event = cast("LambdaEvent", event)
 
     file_path: str = event["downsize_video"]
     video_file: VideoFile = cast("VideoFile", find_media_type(file_path))

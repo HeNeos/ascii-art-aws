@@ -8,8 +8,8 @@ from mypy_boto3_s3.client import S3Client
 from numpy import ndarray, uint8
 from numpy.typing import NDArray
 
+from lambdas.models.media_file import ImageExtension
 from lambdas.process.post_processing.utils import apply_post_processing
-from lambdas.utils.custom_types import ImageExtension
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

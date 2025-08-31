@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 
 from cairo import Context, ImageSurface
 
+from lambdas.models.media_file import Color
 from lambdas.process.ascii_dict import DisplayFormats
-from lambdas.utils.custom_types import Color
 
 
 class CairoContext(ABC, Context):
