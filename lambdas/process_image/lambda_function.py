@@ -5,7 +5,7 @@ from shutil import rmtree
 from typing import TypedDict, cast
 
 import boto3
-from cv2 import COLOR_BGR2RGB, cvtColor, imread
+from cv2 import COLOR_BGR2RGB, IMWRITE_JPEG_QUALITY, cvtColor, imread, imwrite
 from mypy_boto3_dynamodb import DynamoDBClient
 from mypy_boto3_s3.client import S3Client
 from numpy import uint8
@@ -21,6 +21,7 @@ from lambdas.models.r2 import R2Credentials
 from lambdas.models.state_table import AsciiArtTableStatus
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.dithering.utils import get_dithering_strategy
+from lambdas.process.post_processing.utils import apply_post_processing
 from lambdas.process.utils import (
     ascii_convert,
     create_char_array,
@@ -107,14 +108,19 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         ascii_image,
         ImageExtension(media_file.extension),
     )
-    # TODO: fix, this line apply the postprocessing and save it to local file.
+
     post_processed_local_file: str = f"/tmp/{random_id}/{media_file.file_name}_ascii.jpg"
     output_dir = os.path.join("/tmp", random_id)
     if os.path.exists(output_dir):
         rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
-    image_object.write_to_disk(post_processed_local_file)
+    post_processed_image = apply_post_processing(image_object.to_ndarray())
+    imwrite(
+        post_processed_local_file,
+        post_processed_image,
+        [IMWRITE_JPEG_QUALITY, 90],
+    )
 
     object_key: str = (
         f"{random_id}/{media_file.file_name}_ascii.{media_file.extension.value}"

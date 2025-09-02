@@ -9,8 +9,10 @@ from cv2 import (
     CAP_PROP_FRAME_HEIGHT,
     CAP_PROP_FRAME_WIDTH,
     COLOR_BGR2RGB,
+    IMWRITE_JPEG_QUALITY,
     VideoCapture,
     cvtColor,
+    imwrite,
 )
 from mypy_boto3_s3.client import S3Client
 from numpy import str_, uint8
@@ -26,6 +28,7 @@ from lambdas.models.media_file import (
 from lambdas.models.r2 import R2Credentials
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.dithering.utils import get_dithering_strategy
+from lambdas.process.post_processing.utils import apply_post_processing
 from lambdas.process.utils import (
     ascii_convert,
     create_char_array,
@@ -146,7 +149,12 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         for frame_id in range(len(ascii_frames))
     ]
     for i in range(len(ascii_frames)):
-        ascii_frames[i].write_to_disk(frame_paths[i])
+        post_processed_image = apply_post_processing(ascii_frames[i].to_ndarray())
+        imwrite(
+            frame_paths[i],
+            post_processed_image,
+            [IMWRITE_JPEG_QUALITY, 90],
+        )
     logger.info("Finish ascii-ed frames")
     video_path: str = f"/tmp/{video_name}.mp4"
     merge_frames(
