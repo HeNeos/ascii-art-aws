@@ -7,12 +7,43 @@ requires-python = ">=3.11"
 [dependency-groups]
 dev = ["boto3>=1.34.119", "pytest>=8.0.0", "requests>=2.32.3"]
 lint = ["ruff>=0.10.0", "pylint"]
-downsize_media = []
-downsize_video = []
-extract_audio = []
-merge_frames = []
-process_frames = []
-process_image = []
+downsize_media = [
+  "boto3==1.35.39",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+  "numpy==1.26.4",
+  "opencv-contrib-python-headless==4.10.0.84",
+]
+downsize_video = [
+  "boto3==1.35.39",
+  "lambda-multiprocessing==0.5",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+  "numpy==1.26.4",
+]
+extract_audio = ["boto3==1.35.39", "mypy-boto3-s3==1.35.46", "numpy==1.26.4"]
+merge_frames = [
+  "boto3==1.35.39",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+]
+process_frames = [
+  "boto3==1.35.39",
+  "mypy-boto3-s3==1.35.46",
+  "numba==0.60.0",
+  "numpy==1.26.4",
+  "opencv-contrib-python-headless==4.10.0.84",
+  "pycairo==1.27.0",
+]
+process_image = [
+  "boto3==1.35.39",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+  "numba==0.60.0",
+  "numpy==1.26.4",
+  "opencv-contrib-python-headless==4.10.0.84",
+  "pycairo==1.27.0",
+]
 
 [tool.ruff]
 line-length = 90
@@ -47,6 +78,8 @@ ignore = [
   "D107",
   "D206",
   "E501",
+  "EM101",
+  "EM102",
   "G004",
   "TC001",
   "TC002",
@@ -54,6 +87,7 @@ ignore = [
   "TD002",
   "TD003",
   "LOG015",
+  "TRY003",
   "TRY300",
   "TRY301",
   "INP001",
@@ -104,6 +138,9 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
+warn_incomplete_stub = false
+follow_untyped_imports = false
+follow_imports_for_stubs = false
 # disallow_untyped_defs = true
 # disallow_incomplete_defs = true
 # ignore_missing_imports = true
@@ -117,11 +154,7 @@ exclude = '''
 '''
 
 [tool.basedpyright]
-exclude = [
-  "**/node_modules",
-  "**/__pycache__",
-  ".venv",
-]
+exclude = ["**/node_modules", "**/__pycache__", ".venv"]
 venvPath = "."
 venv = ".venv"
 

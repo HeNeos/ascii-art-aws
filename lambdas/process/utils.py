@@ -20,7 +20,7 @@ from numpy import (
 from numpy.typing import NDArray
 
 from lambdas.models.font import Font
-from lambdas.models.media_file import AsciiColors, AsciiImage
+from lambdas.models.media_file import AsciiColors, AsciiImage, Color
 from lambdas.process.ascii_dict import AsciiDict, AsciiDictEdges, display_formats
 from lambdas.process.canvas_context.cairo_context import CairoContextFactory
 from lambdas.process.dithering import DitheringStrategy
@@ -264,13 +264,13 @@ def create_ascii_image(
     output: str,
 ) -> ImageSurface:
     global face
-    rows = len(ascii_art)
-    columns = len(ascii_art[0])
+    rows: int = len(ascii_art)
+    columns: int = len(ascii_art[0])
 
-    surface_width = int(Font.Width.value * columns)
-    surface_height = int(Font.Height.value * rows)
+    surface_width: int = int(Font.Width.value * columns)
+    surface_height: int = int(Font.Height.value * rows)
 
-    surface = ImageSurface(FORMAT_RGB24, surface_width, surface_height)
+    surface: ImageSurface = ImageSurface(FORMAT_RGB24, surface_width, surface_height)
     context = CairoContextFactory.create(display_formats[output], surface)
 
     if face is None:
@@ -284,8 +284,8 @@ def create_ascii_image(
     for row in range(rows):
         x = 0
         for column in range(columns):
-            char = ascii_art[row][column]
-            color = image_colors[row][column]
+            char: str = ascii_art[row][column]
+            color: Color = image_colors[row][column]
             luminance = gray_array[row][column]
             context.set_color(color, luminance)
             context.context.move_to(x, y + Font.Height.value)

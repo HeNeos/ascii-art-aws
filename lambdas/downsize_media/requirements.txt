@@ -1,5 +1,5 @@
 numpy==1.26.4
 boto3==1.35.39
 mypy-boto3-s3==1.35.46
-mypy-boto3-dynamodb
+mypy-boto3-dynamodb==1.40.20
 opencv-contrib-python-headless==4.10.0.84

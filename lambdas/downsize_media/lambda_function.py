@@ -28,12 +28,12 @@ logger.setLevel(logging.INFO)
 MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
 STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
 
-s3_client: S3Client = boto3.client("s3")
+s3_client: S3Client = cast("S3Client", boto3.client("s3"))
 # ascii_art_ascii_s3_client: AsciiArtS3Client = AsciiArtS3Client(
 #     s3_client=s3_client,
 #     bucket_name=ASCII_ART_BUCKET,
 # )
-dynamo_db_client: DynamoDBClient = boto3.client("dynamodb")
+dynamo_db_client: DynamoDBClient = cast("DynamoDBClient", boto3.client("dynamodb"))
 ascii_dynamo_db_client: AsciiArtDynamoDbClient = AsciiArtDynamoDbClient(
     dynamo_db_client,
     STATUS_TABLE_NAME,

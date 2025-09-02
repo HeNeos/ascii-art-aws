@@ -14,6 +14,7 @@ class Saturation(PostProcessingStrategy):
 
     def apply(self, image: NDArray[uint8], value: float) -> NDArray[uint8]:
         """Adjust the saturation of an image.
+
         value: float, saturation factor. >1 increases saturation, <1 decreases. e.g., 1.5
         """
         hsv = cvtColor(image, COLOR_BGR2HSV)

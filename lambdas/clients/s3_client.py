@@ -6,7 +6,7 @@ from mypy_boto3_s3.client import S3Client
 from lambdas.models.r2 import R2Credentials
 
 ascii_r2_client: S3Client | None = None
-client_cache: dict[str, "AsciiArtS3Client"] = dict()
+client_cache: dict[str, "AsciiArtS3Client"] = {}
 
 
 class AsciiArtS3Client:

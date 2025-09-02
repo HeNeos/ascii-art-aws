@@ -2,7 +2,8 @@ from typing import cast
 
 from cv2 import CV_64F, Sobel
 from numba import njit
-from numpy import arctan2, float64, max, pi, sqrt
+from numpy import arctan2, float64, pi, sqrt
+from numpy import max as np_max
 from numpy.typing import NDArray
 
 
@@ -12,7 +13,7 @@ def calculate_magnitudes_and_angles(
     grad_y: NDArray[float64],
 ) -> tuple[NDArray[float64], NDArray[float64]]:
     magnitudes = sqrt(grad_x**2 + grad_y**2)
-    max_value = max(magnitudes)
+    max_value = np_max(magnitudes)
     if max_value > 0:
         magnitudes /= max_value
     angles = arctan2(grad_y, grad_x) * 180 / pi

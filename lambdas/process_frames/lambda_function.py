@@ -17,6 +17,7 @@ from numpy import str_, uint8
 from numpy.typing import NDArray
 
 from lambdas.clients.s3_client import AsciiArtS3Client
+from lambdas.models.frames import FrameData, Frames
 from lambdas.models.media_file import (
     ImageExtension,
     MediaFile,
@@ -30,7 +31,6 @@ from lambdas.process.utils import (
     create_char_array,
     get_ascii_dict,
 )
-from lambdas.process_frames.modules.frames import FrameData, Frames
 from lambdas.utils.ffmpeg import merge_frames
 from lambdas.utils.save_image import ImageCairo
 from lambdas.utils.utils import (
@@ -47,7 +47,7 @@ ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
 MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
 R2_SECRETS_BUCKET: str = os.environ["R2_SECRETS_BUCKET"]
 
-s3_client: S3Client = boto3.client("s3")
+s3_client: S3Client = cast("S3Client", boto3.client("s3"))
 ascii_art_ascii_s3_client: AsciiArtS3Client = AsciiArtS3Client(
     s3_client=s3_client,
     bucket_name=ASCII_ART_BUCKET,

@@ -1,7 +1,9 @@
 import json
 import os
+from typing import cast
 
 from mypy_boto3_s3.client import S3Client
+from mypy_boto3_s3.type_defs import GetObjectOutputTypeDef
 
 from lambdas.models.media_file import (
     ImageExtension,
@@ -40,13 +42,16 @@ def download_from_s3(s3_client: S3Client, bucket_name: str, s3_key: str) -> str:
 
 
 def get_r2_credentials(s3_client: S3Client, bucket_name: str) -> R2Credentials:
-    response = s3_client.get_object(Bucket=bucket_name, Key="r2_secrets.json")
-    json_content: str = response["Body"].read().decode("utf-8")
-    json_object = json.loads(json_content)
+    response: GetObjectOutputTypeDef = s3_client.get_object(
+        Bucket=bucket_name,
+        Key="r2_secrets.json",
+    )
+    json_content: str = cast("str", response["Body"].read().decode("utf-8"))
+    json_data = json.loads(json_content)
 
     return R2Credentials(
-        cloudflare_account_id=json_object["cloudflare_account_id"],
-        r2_access_key_id=json_object["r2_access_key_id"],
-        r2_secret_access_key=json_object["r2_secret_access_key"],
-        ascii_art_bucket_name=f"ascii-art-storage-{json_object['cloudflare_account_id']}",
+        cloudflare_account_id=json_data["cloudflare_account_id"],
+        r2_access_key_id=json_data["r2_access_key_id"],
+        r2_secret_access_key=json_data["r2_secret_access_key"],
+        ascii_art_bucket_name=f"ascii-art-storage-{json_data['cloudflare_account_id']}",
     )

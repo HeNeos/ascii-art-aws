@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
 MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
 
-s3_client: S3Client = boto3.client("s3")
+s3_client: S3Client = cast("S3Client", boto3.client("s3"))
 ascii_art_media_s3_client: AsciiArtS3Client = AsciiArtS3Client(
     s3_client=s3_client,
     bucket_name=MEDIA_BUCKET,
@@ -61,11 +61,12 @@ def lambda_handler(
     audio_path: str = f"/tmp/{audio_file_name}.mp3"
     extract_audio(local_file, audio_path)
 
+    processed_key: str
     # TODO: check if audio_path has a size
     if audio_path is None:
         processed_key = ""
     else:
-        processed_key: str = f"{audio_file_name}/audio.mp3"
+        processed_key = f"{audio_file_name}/audio.mp3"
         ascii_art_audio_s3_client.save_from_local(
             local_path=audio_path,
             key=processed_key,

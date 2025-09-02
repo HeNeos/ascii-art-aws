@@ -2,7 +2,7 @@ import logging
 import os
 from dataclasses import dataclass
 from multiprocessing import cpu_count
-from typing import Any, TypedDict, cast
+from typing import TypedDict, cast
 
 import boto3
 from lambda_multiprocessing import Pool
@@ -33,13 +33,13 @@ STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
 MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
 MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
 
-s3_client: S3Client = boto3.client("s3")
+s3_client: S3Client = cast("S3Client", boto3.client("s3"))
 ascii_art_media_s3_client: AsciiArtS3Client = AsciiArtS3Client(
     s3_client=s3_client,
     bucket_name=MEDIA_BUCKET,
 )
 
-dynamo_db_client: DynamoDBClient = boto3.client("dynamodb")
+dynamo_db_client: DynamoDBClient = cast("DynamoDBClient", boto3.client("dynamodb"))
 ascii_dynamo_db_client: AsciiArtDynamoDbClient = AsciiArtDynamoDbClient(
     dynamo_db_client,
     STATUS_TABLE_NAME,
@@ -136,13 +136,16 @@ def split_video(video_path: str, media_file: VideoFile) -> list[str]:
         batch_id += 1
 
     pool = Pool(cpu_count())
-    processed_keys: list[str] = pool.map(save_split_video, videos_metadata)
+    processed_keys: list[str] = cast(
+        "list[str]",
+        pool.map(save_split_video, videos_metadata),
+    )
     return processed_keys
 
 
 def lambda_handler(
     event: LambdaEvent | LambdaEventWarm,
-    _: Any,
+    _: None,
 ) -> LambdaResponse | LambdaResponseWarm:
     global downsize_video_path
 
