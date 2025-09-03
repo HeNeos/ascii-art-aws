@@ -1,10 +1,10 @@
-import os
 import json
-import boto3
-
-from typing import TypedDict, Any
+import os
 from enum import Enum
 from time import time
+from typing import Any, TypedDict
+
+import boto3
 
 s3 = boto3.client("s3")
 BUCKET = os.environ["UPLOAD_BUCKET"]
@@ -87,7 +87,10 @@ def lambda_handler(event: Event, _: Any) -> Response:
     output: str = query_string_parameters.get("output", "color")
 
     error_message: str | None = check_parameters(
-        token, dithering, resolution, edge_detection
+        token,
+        dithering,
+        resolution,
+        edge_detection,
     )
 
     if error_message:

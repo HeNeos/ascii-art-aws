@@ -2,12 +2,12 @@ from abc import ABC, abstractmethod
 
 from cairo import Context, ImageSurface
 
+from lambdas.models.media_file import Color
 from lambdas.process.ascii_dict import DisplayFormats
-from lambdas.utils.custom_types import Color
 
 
 class CairoContext(ABC, Context):
-    def __init__(self, surface: ImageSurface):
+    def __init__(self, surface: ImageSurface) -> None:
         self.context = Context(surface)
 
     @abstractmethod
@@ -33,9 +33,10 @@ class CairoBlackAndWhiteContext(CairoContext):
 class CairoContextFactory:
     @staticmethod
     def create(display_format: DisplayFormats, surface: ImageSurface) -> CairoContext:
-        if display_format is DisplayFormats.COLOR:
-            return CairoColorContext(surface)
-        if display_format is DisplayFormats.GRAY_SCALE:
-            return CairoGrayContext(surface)
-        if display_format is DisplayFormats.BLACK_AND_WHITE:
-            return CairoBlackAndWhiteContext(surface)
+        match display_format:
+            case DisplayFormats.COLOR:
+                return CairoColorContext(surface)
+            case DisplayFormats.GRAY_SCALE:
+                return CairoGrayContext(surface)
+            case DisplayFormats.BLACK_AND_WHITE:
+                return CairoBlackAndWhiteContext(surface)

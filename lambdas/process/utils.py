@@ -1,27 +1,27 @@
 import logging
+from ctypes import CDLL, Structure, byref, c_byte, c_int, c_void_p
 from typing import no_type_check
 
-from ctypes import c_void_p, c_byte, byref, c_int, CDLL, Structure
-from cairo import FontFace, Context, ImageSurface, FORMAT_A8, FORMAT_RGB24
-from numpy.typing import NDArray
+from cairo import FORMAT_A8, FORMAT_RGB24, Context, FontFace, ImageSurface
+from numba import jit
 from numpy import (
     array,
-    str_,
-    uint8,
-    int32,
-    float64,
     clip,
-    dot,
     digitize,
+    dot,
+    float64,
+    int32,
     linspace,
     ndarray,
+    str_,
+    uint8,
     zeros_like,
 )
-from numba import jit
+from numpy.typing import NDArray
 
-from lambdas.utils.custom_types import AsciiColors, AsciiImage
-from lambdas.utils.font import Font
-from lambdas.process.ascii_dict import AsciiDict, display_formats, AsciiDictEdges
+from lambdas.models.font import Font
+from lambdas.models.media_file import AsciiColors, AsciiImage, Color
+from lambdas.process.ascii_dict import AsciiDict, AsciiDictEdges, display_formats
 from lambdas.process.canvas_context.cairo_context import CairoContextFactory
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.edge_detection import EdgeDetection
@@ -56,14 +56,13 @@ def create_char_array(ascii_dict: AsciiDict) -> NDArray[str_]:
 def map_angle_to_ascii(angle: float) -> int:
     if -22.5 <= angle < 22.5 or 157.5 <= angle <= 180 or -180 <= angle < -157.5:
         return 0  # |
-    elif 67.5 <= angle < 112.5 or -112.5 <= angle < -67.5:
+    if 67.5 <= angle < 112.5 or -112.5 <= angle < -67.5:
         return -1  # _
-    elif 22.5 <= angle < 67.5 or -157.5 <= angle < -112.5:
+    if 22.5 <= angle < 67.5 or -157.5 <= angle < -112.5:
         return 2  # /
-    elif 112.5 <= angle < 157.5 or -67.5 <= angle < -22.5:
+    if 112.5 <= angle < 157.5 or -67.5 <= angle < -22.5:
         return 3  # \
-    else:
-        return -1  # No edge
+    return -1  # No edge
 
 
 @jit(
@@ -88,7 +87,9 @@ def _map_edges_to_positions(
 
 
 def map_to_char_vectorized(
-    values: ndarray, char_array: ndarray, edge_detection_parameters: EdgeDetection
+    values: ndarray,
+    char_array: ndarray,
+    edge_detection_parameters: EdgeDetection,
 ) -> NDArray[str_]:
     positions: NDArray[int32] = (
         digitize(values, linspace(0, 256, len(char_array) + 1)) - 1
@@ -117,7 +118,9 @@ def process_image(
     edge_detection: bool = False,
 ) -> tuple[AsciiImage, AsciiColors, NDArray[float64]]:
     gray_array: NDArray[float64] = clip(
-        dot(image[..., :3], [0.3090, 0.5670, 0.1240]), 0.0, 255.0
+        dot(image[..., :3], [0.3090, 0.5670, 0.1240]),
+        0.0,
+        255.0,
     )
 
     edge_detection_parameters: EdgeDetection = EdgeDetection()
@@ -129,7 +132,9 @@ def process_image(
         gray_array = dithering_strategy.dithering(gray_array, len(char_array))
 
     ascii_chars: NDArray[str_] = map_to_char_vectorized(
-        gray_array, char_array, edge_detection_parameters
+        gray_array,
+        char_array,
+        edge_detection_parameters,
     )
 
     return ascii_chars.tolist(), [row.tolist() for row in image], gray_array
@@ -205,28 +210,34 @@ def create_cairo_font_face_for_file(filename, faceindex=0, loadoptions=0) -> Fon
     cr_face = None
     try:
         status = _freetype_so.FT_New_Face(
-            _ft_lib, filename.encode("utf-8"), faceindex, byref(ft_face)
+            _ft_lib,
+            filename.encode("utf-8"),
+            faceindex,
+            byref(ft_face),
         )
         if status != FT_Err_Ok:
             raise RuntimeError(
-                "Error %d creating FreeType font face for %s" % (status, filename)
+                "Error %d creating FreeType font face for %s" % (status, filename),
             )
         cr_face = _cairo_so.cairo_ft_font_face_create_for_ft_face(ft_face, loadoptions)
         status = _cairo_so.cairo_font_face_status(cr_face)
         if status != CAIRO_STATUS_SUCCESS:
             raise RuntimeError(
-                "Error %d creating cairo font face for %s" % (status, filename)
+                "Error %d creating cairo font face for %s" % (status, filename),
             )
         if (
             _cairo_so.cairo_font_face_get_user_data(cr_face, byref(_ft_destroy_key))
             is None
         ):
             status = _cairo_so.cairo_font_face_set_user_data(
-                cr_face, byref(_ft_destroy_key), ft_face, _freetype_so.FT_Done_Face
+                cr_face,
+                byref(_ft_destroy_key),
+                ft_face,
+                _freetype_so.FT_Done_Face,
             )
             if status != CAIRO_STATUS_SUCCESS:
                 raise RuntimeError(
-                    "Error %d doing user_data dance for %s" % (status, filename)
+                    "Error %d doing user_data dance for %s" % (status, filename),
                 )
             ft_face = None
         cairo_ctx = Context(_surface)
@@ -235,7 +246,7 @@ def create_cairo_font_face_for_file(filename, faceindex=0, loadoptions=0) -> Fon
         status = _cairo_so.cairo_font_face_status(cairo_t)
         if status != CAIRO_STATUS_SUCCESS:
             raise RuntimeError(
-                "Error %d creating cairo font face for %s" % (status, filename)
+                "Error %d creating cairo font face for %s" % (status, filename),
             )
 
     finally:
@@ -253,13 +264,13 @@ def create_ascii_image(
     output: str,
 ) -> ImageSurface:
     global face
-    rows = len(ascii_art)
-    columns = len(ascii_art[0])
+    rows: int = len(ascii_art)
+    columns: int = len(ascii_art[0])
 
-    surface_width = int(Font.Width.value * columns)
-    surface_height = int(Font.Height.value * rows)
+    surface_width: int = int(Font.Width.value * columns)
+    surface_height: int = int(Font.Height.value * rows)
 
-    surface = ImageSurface(FORMAT_RGB24, surface_width, surface_height)
+    surface: ImageSurface = ImageSurface(FORMAT_RGB24, surface_width, surface_height)
     context = CairoContextFactory.create(display_formats[output], surface)
 
     if face is None:
@@ -273,8 +284,8 @@ def create_ascii_image(
     for row in range(rows):
         x = 0
         for column in range(columns):
-            char = ascii_art[row][column]
-            color = image_colors[row][column]
+            char: str = ascii_art[row][column]
+            color: Color = image_colors[row][column]
             luminance = gray_array[row][column]
             context.set_color(color, luminance)
             context.context.move_to(x, y + Font.Height.value)

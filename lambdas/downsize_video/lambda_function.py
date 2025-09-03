@@ -6,28 +6,45 @@ from typing import TypedDict, cast
 
 import boto3
 from lambda_multiprocessing import Pool
+from mypy_boto3_dynamodb import DynamoDBClient
+from mypy_boto3_s3.client import S3Client
 
-from lambdas.utils.custom_types import VideoExtension, VideoFile
+from lambdas.clients.dynamodb_client import AsciiArtDynamoDbClient
+from lambdas.clients.s3_client import AsciiArtS3Client
+from lambdas.models.font import Font
+from lambdas.models.lambda_warm import LambdaEventWarm, LambdaResponseWarm
+from lambdas.models.media_file import VideoExtension, VideoFile
+from lambdas.models.state_table import (
+    AsciiArtTableItem,
+    AsciiArtTableStatus,
+)
 from lambdas.utils.ffmpeg import (
     get_video_length,
     get_video_resolution,
     resize_video,
     trim_video,
 )
-from lambdas.utils.font import Font
-from lambdas.utils.utils import download_from_s3, find_media_type
-from lambdas.utils.save import save_video
+from lambdas.utils.utils import find_media_type
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-s3_client = boto3.client("s3")
-dynamo_client = boto3.client("dynamodb")
 
-
-bucket_name: str = os.environ["MEDIA_BUCKET"]
 STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
-
 MAX_HEIGHT: int = int(os.environ["MAX_HEIGHT"])
+MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
+
+s3_client: S3Client = cast("S3Client", boto3.client("s3"))
+ascii_art_media_s3_client: AsciiArtS3Client = AsciiArtS3Client(
+    s3_client=s3_client,
+    bucket_name=MEDIA_BUCKET,
+)
+
+dynamo_db_client: DynamoDBClient = cast("DynamoDBClient", boto3.client("dynamodb"))
+ascii_dynamo_db_client: AsciiArtDynamoDbClient = AsciiArtDynamoDbClient(
+    dynamo_db_client,
+    STATUS_TABLE_NAME,
+)
+
 downsize_video_path: str | None = None
 
 
@@ -35,6 +52,19 @@ class LambdaEvent(TypedDict):
     key: str
     resolution: str
     warm: bool
+
+
+class LambdaResponse(TypedDict):
+    key: str
+    is_video: bool
+    is_image: bool
+    downsize_video: str
+    processed_key: list[str]
+    random_id: str
+    dithering: str
+    edge_detection: bool
+    resolution: int
+    output: str
 
 
 @dataclass
@@ -54,6 +84,8 @@ def convert_time(t: int) -> str:
 
 
 def save_split_video(video_metadata: SplittedVideo) -> str:
+    global downsize_video_path
+
     if downsize_video_path is None:
         return ""
 
@@ -64,10 +96,12 @@ def save_split_video(video_metadata: SplittedVideo) -> str:
         video_metadata.local_path,
     )
 
-    folder_name = f"{video_metadata.random_id}/{video_metadata.video_name}/{video_metadata.video_name}"  # noqa: 501
-    key = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"  # noqa: 501
-    return save_video(
-        s3_client, bucket_name, video_metadata.local_path, f"processed/{key}"
+    folder_name: str = f"{video_metadata.random_id}/{video_metadata.video_name}/{video_metadata.video_name}"
+    key: str = f"{folder_name}-{video_metadata.batch_id:03d}.{video_metadata.video_extension.value}"
+
+    return ascii_art_media_s3_client.save_from_local(
+        local_path=video_metadata.local_path,
+        key=f"processed/{key}",
     )
 
 
@@ -93,7 +127,7 @@ def split_video(video_path: str, media_file: VideoFile) -> list[str]:
                 video_name=media_file.file_name,
                 video_extension=media_file.extension,
                 random_id=media_file.random_id,
-            )
+            ),
         )
         if end_time == -1:
             break
@@ -102,36 +136,43 @@ def split_video(video_path: str, media_file: VideoFile) -> list[str]:
         batch_id += 1
 
     pool = Pool(cpu_count())
-    processed_keys: list[str] = pool.map(save_split_video, videos_metadata)
+    processed_keys: list[str] = cast(
+        "list[str]",
+        pool.map(save_split_video, videos_metadata),
+    )
     return processed_keys
 
 
-def lambda_handler(event: LambdaEvent, _: dict) -> dict:
+def lambda_handler(
+    event: LambdaEvent | LambdaEventWarm,
+    _: None,
+) -> LambdaResponse | LambdaResponseWarm:
     global downsize_video_path
+
     logger.info(event)
+
     if event.get("warm", None):
         return {"warmed": True}
+
+    event = cast("LambdaEvent", event)
+
     file_path: str = event["key"]
+    video_file: VideoFile = cast("VideoFile", find_media_type(file_path))
 
-    video_file: VideoFile = cast(VideoFile, find_media_type(file_path))
-
-    response: dict | None = dynamo_client.get_item(
-        TableName=STATUS_TABLE_NAME,
-        Key={"id": {"S": video_file.random_id}, "status": {"S": "PENDING"}},
-    ).get("Item")
-
-    if response is None:
+    item: AsciiArtTableItem | None = ascii_dynamo_db_client.get_item(
+        unique_id=video_file.random_id,
+        status=AsciiArtTableStatus.PENDING,
+    )
+    if item is None:
         raise ValueError("No item found in DynamoDB")
 
-    resolution: int = min(int(response["resolution"]["S"]), MAX_HEIGHT)
-    dithering: str = response["dithering"]["S"]
-    edge_detection: bool = response["edge_detection"]["BOOL"]
-    # output: str = response["dithering"]["S"]
+    resolution: int = min(int(item.resolution), MAX_HEIGHT)
+    # output: str = item["dithering"]["S"]
     output: str = "COLOR"
 
-    local_file: str = download_from_s3(s3_client, bucket_name, file_path)
+    local_file: str = ascii_art_media_s3_client.download_to_local(s3_key=file_path)
 
-    video_width, video_height = get_video_resolution(local_file)
+    video_width, video_height = get_video_resolution(video_path=local_file)
     new_width: int = int(video_width * resolution / video_height)
     if new_width % 2 == 1:
         new_width += 1
@@ -142,7 +183,7 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         downsize_height
         * video_width
         * (Font.Height.value / Font.Width.value)
-        / video_height
+        / video_height,
     )
 
     if downsize_width % 2 == 1:
@@ -151,20 +192,26 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
     downsize_video_path = (
         f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}"
     )
-    resize_video(local_file, downsize_width, downsize_height, downsize_video_path)
+    resize_video(
+        video_path=local_file,
+        width=downsize_width,
+        height=downsize_height,
+        output_path=downsize_video_path,
+    )
 
-    video_folder_name = (
+    video_folder_name: str = (
         f"{video_file.random_id}/{video_file.file_name}/{video_file.file_name}"
     )
 
-    downsize_video_key = save_video(
-        s3_client,
-        bucket_name,
-        f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
-        f"processed/{video_folder_name}-downsize.{video_file.extension.value}",
+    downsize_video_key: str = ascii_art_media_s3_client.save_from_local(
+        local_path=f"/tmp/{video_file.file_name}-downsize.{video_file.extension.value}",
+        key=f"processed/{video_folder_name}-downsize.{video_file.extension.value}",
     )
 
-    processed_key = split_video(downsize_video_path, video_file)
+    processed_key: list[str] = split_video(
+        video_path=downsize_video_path,
+        media_file=video_file,
+    )
 
     return {
         "key": file_path,
@@ -173,8 +220,8 @@ def lambda_handler(event: LambdaEvent, _: dict) -> dict:
         "downsize_video": downsize_video_key,
         "processed_key": processed_key,
         "random_id": video_file.random_id,
-        "dithering": dithering,
-        "edge_detection": edge_detection,
+        "dithering": item.dithering,
+        "edge_detection": item.edge_detection,
         "resolution": resolution,
         "output": output,
     }

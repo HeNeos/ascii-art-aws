@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import TypeAlias
+
 from numpy import uint8
 from numpy.typing import NDArray
 

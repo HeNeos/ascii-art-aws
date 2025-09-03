@@ -2,8 +2,8 @@ from ..dithering import DitheringStrategy
 from ..dithering.atkinson import DitheringAtkinson
 from ..dithering.floyd_steinberg import DitheringFloydSteinberg
 from ..dithering.jarvis_judice_ninke import DitheringJarvisJudiceNinke
-from ..dithering.riemersma_naive import DitheringRiemersmaNaive
 from ..dithering.riemersma import DitheringRiemersma
+from ..dithering.riemersma_naive import DitheringRiemersmaNaive
 
 ditherings: dict[str, type[DitheringStrategy]] = {
     "atkinson": DitheringAtkinson,

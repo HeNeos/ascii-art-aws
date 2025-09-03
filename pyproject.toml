@@ -1,39 +1,149 @@
-[tool.black]
-line-length = 88
-target-version = ["py38", "py39", "py310", "py311", "py312"]
-exclude = '''
-/(
-    \.git
-    | \.mypy_cache
-    | \.ruff_cache
-    | \.venv
-    | build
-    | dist
-)/
-'''
+[project]
+name = "AsciiArt"
+version = "1.0.0"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[dependency-groups]
+dev = ["boto3>=1.34.119", "pytest>=8.0.0", "requests>=2.32.3"]
+lint = ["ruff>=0.10.0", "pylint"]
+downsize_media = [
+  "boto3==1.35.39",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+  "numpy==1.26.4",
+  "opencv-contrib-python-headless==4.10.0.84",
+]
+downsize_video = [
+  "boto3==1.35.39",
+  "lambda-multiprocessing==0.5",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+  "numpy==1.26.4",
+]
+extract_audio = ["boto3==1.35.39", "mypy-boto3-s3==1.35.46", "numpy==1.26.4"]
+merge_frames = [
+  "boto3==1.35.39",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+]
+process_frames = [
+  "boto3==1.35.39",
+  "mypy-boto3-s3==1.35.46",
+  "numba==0.60.0",
+  "numpy==1.26.4",
+  "opencv-contrib-python-headless==4.10.0.84",
+  "pycairo==1.27.0",
+]
+process_image = [
+  "boto3==1.35.39",
+  "mypy-boto3-dynamodb==1.40.20",
+  "mypy-boto3-s3==1.35.46",
+  "numba==0.60.0",
+  "numpy==1.26.4",
+  "opencv-contrib-python-headless==4.10.0.84",
+  "pycairo==1.27.0",
+]
 
 [tool.ruff]
-line-length = 88
-target-version = "py310"
-select = ["E", "F", "W", "B", "I"]
-ignore = ["E501"]  # Ignore line-length checks if handled by Black
-extend-exclude = [
-    "build/",
-    "dist/",
-    ".venv/",
-    ".ruff_cache/",
-    ".mypy_cache/",
+line-length = 90
+target-version = "py311"
+indent-width = 4
+
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".pyenv",
+  ".ruff_cache",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "build",
+  "dist",
+  "site-packages",
+  "venv",
 ]
-fixable = ["ALL"]  # Enable Ruff's autofix capabilities
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D107",
+  "D206",
+  "E501",
+  "EM101",
+  "EM102",
+  "G004",
+  "TC001",
+  "TC002",
+  "TC003",
+  "TD002",
+  "TD003",
+  "LOG015",
+  "TRY003",
+  "TRY300",
+  "TRY301",
+  "INP001",
+  "S108",
+]
+fixable = ["ALL"]
+unfixable = []
+
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.uv.pip]
+python-version = "3.11"
+
+[tool.pylint]
+disable = [
+  "missing-module-docstring",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "invalid-name",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-locals",
+  "too-many-statements",
+  "logging-fstring-interpolation",
+  # "import-error",
+]
+ignore-patterns = ["**/site-packages/**/*.py", ".vscode/*.py"]
+
+[tool.pylint.messages_control]
+convention = "Hint"
+error = "Error"
+fatal = "Error"
+refactor = "Hint"
+warning = "Warning"
+info = "Information"
+
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-ignore_missing_imports = true
+warn_incomplete_stub = false
+follow_untyped_imports = false
+follow_imports_for_stubs = false
+# disallow_untyped_defs = true
+# disallow_incomplete_defs = true
+# ignore_missing_imports = true
 exclude = '''
 /(
     \.git
@@ -43,19 +153,12 @@ exclude = '''
 )/
 '''
 
-[tool.pyright]
-include = ["lambdas"]
-exclude = ["**/node_modules",
-    "**/__pycache__"
-]
-defineConstant = { DEBUG = true }
+[tool.basedpyright]
+exclude = ["**/node_modules", "**/__pycache__", ".venv"]
+venvPath = "."
+venv = ".venv"
 
 reportMissingImports = "error"
-reportMissingTypeStubs = false
-
-pythonVersion = "3.12"
-pythonPlatform = "Linux"
-
-executionEnvironments = [
-  { root = ".venv", pythonVersion = "3.12", pythonPlatform = "Linux", reportMissingImports = "warning" }
-]
+reportMissingTypeStubs = "warning"
+reportUnusedImport = "warning"
+typeCheckingMode = "strict"

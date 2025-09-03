@@ -34,9 +34,10 @@ COPY --from=builder /deps /usr/local/lib/python3.11/site-packages
 
 COPY __init__.py ./lambdas/
 COPY utils/*.py ./lambdas/utils/
-COPY process_frames/lambda_function.py ./lambdas/process_frames/lambda_function.py
-COPY process_frames/modules ./lambdas/process_frames/modules
+COPY models/*.py ./lambdas/models/
+COPY clients/*.py ./lambdas/clients/
 COPY process ./lambdas/process
+COPY process_frames/lambda_function.py ./lambdas/process_frames/lambda_function.py
 
 ENTRYPOINT ["python3.11", "-m", "awslambdaric"]
 CMD ["lambdas.process_frames.lambda_function.lambda_handler"]

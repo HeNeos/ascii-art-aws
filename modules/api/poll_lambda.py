@@ -1,9 +1,9 @@
-import os
 import json
-import boto3
-
-from typing import TypedDict, Any
+import os
 from enum import Enum
+from typing import Any, TypedDict
+
+import boto3
 
 dynamo_client = boto3.client("dynamodb")
 STATUS_TABLE = os.environ["STATUS_TABLE_NAME"]

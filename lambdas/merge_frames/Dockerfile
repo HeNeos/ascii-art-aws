@@ -32,6 +32,8 @@ COPY --from=builder /deps /usr/local/lib/python3.11/site-packages
 
 COPY __init__.py ./lambdas/
 COPY utils/*.py ./lambdas/utils/
+COPY models/*.py ./lambdas/models/
+COPY clients/*.py ./lambdas/clients/
 COPY merge_frames/lambda_function.py ./lambdas/merge_frames/lambda_function.py
 
 ENTRYPOINT ["python3.11", "-m", "awslambdaric"]

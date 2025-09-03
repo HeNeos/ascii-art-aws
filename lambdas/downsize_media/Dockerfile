@@ -13,6 +13,8 @@ COPY --from=builder /deps /var/lang/lib/python3.12/site-packages
 
 COPY __init__.py ./lambdas/
 COPY utils/*.py ./lambdas/utils/
+COPY models/*.py ./lambdas/models/
+COPY clients/*.py ./lambdas/clients/
 COPY downsize_media/lambda_function.py ./lambdas/downsize_media/lambda_function.py
 
 CMD ["lambdas.downsize_media.lambda_function.lambda_handler"]

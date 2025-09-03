@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-import numpy as np
+
 import numpy.typing as npt
 from numba import njit
+from numpy import bool_, clip, float64, zeros
+from numpy import round as np_round
 
 from . import DitheringStrategy
 
@@ -18,14 +20,15 @@ class DitheringRiemersmaNaive(DitheringStrategy):
         cache=True,
     )
     def dithering(
-        image_array: npt.NDArray[np.float64], quantization_levels: int
-    ) -> npt.NDArray[np.float64]:
+        image_array: npt.NDArray[float64],
+        quantization_levels: int,
+    ) -> npt.NDArray[float64]:
         height: int = image_array.shape[0]
         width: int = image_array.shape[1]
 
         scale: float = 255 / (quantization_levels - 1)
-        visited = np.zeros((height, width), dtype=np.bool_)
-        error: float = 0.0
+        visited = zeros((height, width), dtype=bool_)
+        error: float64 = float64(0.0)
 
         spiral_directions: list[tuple[int, int]] = [
             (0, 1),
@@ -42,8 +45,8 @@ class DitheringRiemersmaNaive(DitheringStrategy):
         visited[row, column] = True
 
         for _ in range(height * width):
-            old_pixel = image_array[row, column] + error
-            new_pixel = np.round(old_pixel / scale) * scale
+            old_pixel: float64 = image_array[row, column] + error
+            new_pixel: float64 = np_round(old_pixel / scale) * scale
             error = old_pixel - new_pixel
             image_array[row, column] = new_pixel
 
@@ -53,6 +56,6 @@ class DitheringRiemersmaNaive(DitheringStrategy):
                     row, column = nr, nc
                     visited[row, column] = True
                     break
-        image_array = np.clip(image_array, 0.0, 255.0)
+        image_array = clip(image_array, 0.0, 255.0)
 
         return image_array

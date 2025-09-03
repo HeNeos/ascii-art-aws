@@ -1,58 +1,65 @@
 import logging
 import os
+from shutil import rmtree
+from typing import TypedDict, cast
 
 import boto3
-
-from typing import TypedDict, cast
-from shutil import rmtree
-
 from cv2 import (
-    cvtColor,
-    VideoCapture,
-    CAP_PROP_FRAME_WIDTH,
-    CAP_PROP_FRAME_HEIGHT,
     CAP_PROP_FPS,
+    CAP_PROP_FRAME_HEIGHT,
+    CAP_PROP_FRAME_WIDTH,
     COLOR_BGR2RGB,
+    IMWRITE_JPEG_QUALITY,
+    VideoCapture,
+    cvtColor,
+    imwrite,
 )
+from mypy_boto3_s3.client import S3Client
 from numpy import str_, uint8
 from numpy.typing import NDArray
-from mypy_boto3_s3.client import S3Client
 
-from lambdas.utils.custom_types import (
+from lambdas.clients.s3_client import AsciiArtS3Client
+from lambdas.models.frames import FrameData, Frames
+from lambdas.models.media_file import (
     ImageExtension,
     MediaFile,
     VideoFile,
-    R2Credentials,
 )
-from lambdas.utils.ffmpeg import merge_frames
-from lambdas.process_frames.modules.frames import FrameData, Frames
-from lambdas.process.utils import (
-    create_char_array,
-    get_ascii_dict,
-    ascii_convert,
-)
+from lambdas.models.r2 import R2Credentials
 from lambdas.process.dithering import DitheringStrategy
 from lambdas.process.dithering.utils import get_dithering_strategy
-from lambdas.utils.utils import (
-    download_from_s3,
-    find_media_type,
-    split_file_name,
-    get_r2_credentials,
+from lambdas.process.post_processing.utils import apply_post_processing
+from lambdas.process.utils import (
+    ascii_convert,
+    create_char_array,
+    get_ascii_dict,
 )
-from lambdas.utils.save import save_video
+from lambdas.utils.ffmpeg import merge_frames
 from lambdas.utils.save_image import ImageCairo
+from lambdas.utils.utils import (
+    find_media_type,
+    get_r2_credentials,
+    split_file_name,
+)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-s3_client = boto3.client("s3")
-dynamo_client = boto3.client("dynamodb")
 
 DEFAULT_DITHERING: str = os.environ["DEFAULT_DITHERING"]
 ASCII_ART_BUCKET: str = os.environ["ASCII_ART_BUCKET"]
 MEDIA_BUCKET: str = os.environ["MEDIA_BUCKET"]
 R2_SECRETS_BUCKET: str = os.environ["R2_SECRETS_BUCKET"]
-STATUS_TABLE_NAME: str = os.environ["STATUS_TABLE_NAME"]
+
+s3_client: S3Client = cast("S3Client", boto3.client("s3"))
+ascii_art_ascii_s3_client: AsciiArtS3Client = AsciiArtS3Client(
+    s3_client=s3_client,
+    bucket_name=ASCII_ART_BUCKET,
+)
+ascii_art_media_s3_client: AsciiArtS3Client = AsciiArtS3Client(
+    s3_client=s3_client,
+    bucket_name=MEDIA_BUCKET,
+)
+
 
 r2_credentials: R2Credentials | None = None
 r2_client: S3Client | None = None
@@ -78,10 +85,11 @@ def extract_frames(video_capture: VideoCapture, video_file: VideoFile) -> Frames
         ret, frame = video_capture.read()
         if ret:
             resized_frame: NDArray[uint8] = cast(
-                NDArray[uint8], cvtColor(frame, COLOR_BGR2RGB)
+                "NDArray[uint8]",
+                cvtColor(frame, COLOR_BGR2RGB),
             )
             frames.append(
-                FrameData(frame=resized_frame, frame_id=frame_id, video_name=video_name)
+                FrameData(frame=resized_frame, frame_id=frame_id, video_name=video_name),
             )
             frame_id += 1
         else:
@@ -108,13 +116,13 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     dithering_strategy: type[DitheringStrategy] = get_dithering_strategy(dithering)
 
     media_file: MediaFile = find_media_type(file_path)
-    local_file: str = download_from_s3(s3_client, MEDIA_BUCKET, file_path)
+    local_file: str = ascii_art_media_s3_client.download_to_local(s3_key=file_path)
 
     video_capture: VideoCapture = VideoCapture(local_file)
     width: int = int(video_capture.get(CAP_PROP_FRAME_WIDTH))
     height: int = int(video_capture.get(CAP_PROP_FRAME_HEIGHT))
     video_fps = video_capture.get(CAP_PROP_FPS)
-    frames: Frames = extract_frames(video_capture, cast(VideoFile, media_file))
+    frames: Frames = extract_frames(video_capture, cast("VideoFile", media_file))
     video_capture.release()
     logger.info("Finish extract frames")
     ascii_dict = get_ascii_dict(width, height, output)
@@ -122,7 +130,11 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
     ascii_frames: list[ImageCairo] = [
         ImageCairo(
             ascii_convert(
-                frame.frame, char_array, dithering_strategy, output, edge_detection
+                frame.frame,
+                char_array,
+                dithering_strategy,
+                output,
+                edge_detection,
             ),
             ImageExtension.JPG,
         )
@@ -137,7 +149,12 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         for frame_id in range(len(ascii_frames))
     ]
     for i in range(len(ascii_frames)):
-        ascii_frames[i].write_to_disk(frame_paths[i])
+        post_processed_image = apply_post_processing(ascii_frames[i].to_ndarray())
+        imwrite(
+            frame_paths[i],
+            post_processed_image,
+            [IMWRITE_JPEG_QUALITY, 90],
+        )
     logger.info("Finish ascii-ed frames")
     video_path: str = f"/tmp/{video_name}.mp4"
     merge_frames(
@@ -146,11 +163,9 @@ def lambda_handler(event: LambdaEvent, _: str) -> dict[str, int | str]:
         output_path=video_path,
     )
     logger.info("Finish save local video")
-    key = save_video(
-        s3_client,
-        ASCII_ART_BUCKET,
-        video_path,
-        f"{random_id}/{video_name}/{media_file.file_name}_ascii.{media_file.extension.value}",  # noqa: 501
+    key: str = ascii_art_ascii_s3_client.save_from_local(
+        local_path=video_path,
+        key=f"{random_id}/{video_name}/{media_file.file_name}_ascii.{media_file.extension.value}",
     )
     return {
         "statusCode": 200,
